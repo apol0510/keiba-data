@@ -101,13 +101,16 @@ const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
     </div>
   </header>
 
-  <!-- 凡例 -->
+  <!-- 凡例 + ソートトグル -->
   <div class="legend">
     <span class="leg-item honmei">◎ 本命</span>
     <span class="leg-item taikou">○ 対抗</span>
     <span class="leg-item tanana">▲ 単穴</span>
     <span class="leg-item renshita">△ 連下</span>
-    <span class="leg-note">指数は表示用に調整済み</span>
+    <div class="sort-toggle" id="sortToggle">
+      <button class="sort-btn active" data-sort="number">馬番順</button>
+      <button class="sort-btn" data-sort="index">指数順</button>
+    </div>
   </div>
 
   {!data ? (
@@ -204,9 +207,13 @@ const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
                     {hasAgeGend && <th class="th-small">馬齢</th>}
                   </tr>
                 </thead>
-                <tbody>
+                <tbody class="horse-tbody">
                   {race.horses.map(horse => (
-                    <tr class={`row-${horse.markKey}`}>
+                    <tr
+                      class={`row-${horse.markKey}`}
+                      data-number={horse.number}
+                      data-index={horse.computerIndex}
+                    >
                       <td class="td-mark">
                         {horse.mark && (
                           <span class={`mark-pill ${horse.markKey}`}>{horse.mark}</span>
@@ -346,10 +353,31 @@ const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
   &.renshita  { color: #c084fc; }
 }
 
-.leg-note {
-  font-size: 0.75rem;
-  color: #6b7280;
+.sort-toggle {
+  display: flex;
+  gap: 0.25rem;
   margin-left: auto;
+}
+
+.sort-btn {
+  padding: 0.25rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: transparent;
+  color: #6b7280;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover { color: #e5e7eb; background: rgba(255,255,255,0.06); }
+
+  &.active {
+    background: rgba(124,58,237,0.25);
+    border-color: rgba(124,58,237,0.5);
+    color: #c4b5fd;
+  }
 }
 
 /* ── タブバー ── */
@@ -605,5 +633,33 @@ tabBar?.addEventListener('click', (e) => {
   panels.forEach((p, i) => {
     p.classList.toggle('active', i === idx);
   });
+});
+
+// ソート切り替え（全テーブル一括）
+let currentSort: 'number' | 'index' = 'number';
+
+function sortAllTables(sort: 'number' | 'index') {
+  document.querySelectorAll<HTMLElement>('.horse-tbody').forEach(tbody => {
+    const rows = Array.from(tbody.querySelectorAll<HTMLElement>('tr'));
+    rows.sort((a, b) => {
+      const aVal = Number(sort === 'number' ? a.dataset.number : a.dataset.index);
+      const bVal = Number(sort === 'number' ? b.dataset.number : b.dataset.index);
+      return sort === 'number' ? aVal - bVal : bVal - aVal; // 指数は降順
+    });
+    rows.forEach(r => tbody.appendChild(r));
+  });
+}
+
+document.getElementById('sortToggle')?.addEventListener('click', (e) => {
+  const btn = (e.target as HTMLElement).closest('.sort-btn') as HTMLElement | null;
+  if (!btn || !btn.dataset.sort) return;
+  const sort = btn.dataset.sort as 'number' | 'index';
+  if (sort === currentSort) return;
+
+  currentSort = sort;
+  document.querySelectorAll('.sort-btn').forEach(b => {
+    b.classList.toggle('active', b === btn);
+  });
+  sortAllTables(sort);
 });
 </script>
