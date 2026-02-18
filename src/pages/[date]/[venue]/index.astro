@@ -48,14 +48,16 @@ interface HorseWithMark extends ComputerHorse {
 
 const races = data?.races.map(race => {
   const sorted = [...race.horses].sort((a, b) => b.computerIndex - a.computerIndex);
-  const horses: HorseWithMark[] = sorted.map((h, i) => {
-    const { mark, key } = getMark(i);
-    return {
-      ...h,
-      mark,
-      markKey: key,
-      displayIndex: h.computerIndex - 10,
-    };
+  // 34以下（displayIndex = computerIndex - 10 <= 34）を除外してrankを付与
+  let markRank = 0;
+  const horses: HorseWithMark[] = sorted.map((h) => {
+    const displayIndex = h.computerIndex - 10;
+    if (displayIndex <= 34) {
+      return { ...h, mark: '', markKey: 'none', displayIndex };
+    }
+    const { mark, key } = getMark(markRank);
+    markRank++;
+    return { ...h, mark, markKey: key, displayIndex };
   });
   // 馬番順に並べ直して返す（表示は馬番順）
   const byNumber = [...horses].sort((a, b) => a.number - b.number);
