@@ -35,7 +35,7 @@ function getMark(rank: number): { mark: string; key: string } {
   if (rank === 0) return { mark: '◎', key: 'honmei' };
   if (rank === 1) return { mark: '○', key: 'taikou' };
   if (rank === 2) return { mark: '▲', key: 'tanana' };
-  if (rank <= 9)  return { mark: '△', key: 'renka' };
+  if (rank <= 9)  return { mark: '△', key: 'renshita' };
   return { mark: '', key: 'none' };
 }
 
@@ -106,7 +106,7 @@ const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
     <span class="leg-item honmei">◎ 本命</span>
     <span class="leg-item taikou">○ 対抗</span>
     <span class="leg-item tanana">▲ 単穴</span>
-    <span class="leg-item renka">△ 連下</span>
+    <span class="leg-item renshita">△ 連下</span>
     <span class="leg-note">指数は表示用に調整済み</span>
   </div>
 
@@ -137,7 +137,7 @@ const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
         const honmei    = race.horses.find(h => h.markKey === 'honmei');
         const taikou    = race.horses.find(h => h.markKey === 'taikou');
         const tanana    = race.horses.find(h => h.markKey === 'tanana');
-        const renkaList = race.horses.filter(h => h.markKey === 'renka');
+        const renshitaList = race.horses.filter(h => h.markKey === 'renshita');
 
         return (
           <div
@@ -180,8 +180,8 @@ const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
                   <span class="mc-idx">{tanana.displayIndex}</span>
                 </div>
               )}
-              {[...renkaList].sort((a, b) => a.number - b.number).map(h => (
-                <div class="mark-card renka">
+              {[...renshitaList].sort((a, b) => a.number - b.number).map(h => (
+                <div class="mark-card renshita">
                   <span class="mc-mark">△</span>
                   <span class="mc-num">{h.number}番</span>
                   <span class="mc-name">{h.name}</span>
@@ -343,7 +343,7 @@ const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
   &.honmei { color: #f59e0b; }
   &.taikou { color: #34d399; }
   &.tanana { color: #60a5fa; }
-  &.renka  { color: #c084fc; }
+  &.renshita  { color: #c084fc; }
 }
 
 .leg-note {
@@ -455,7 +455,7 @@ const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
     background: linear-gradient(135deg, rgba(96,165,250,0.12), rgba(96,165,250,0.05));
     border-color: rgba(96,165,250,0.3);
   }
-  &.renka {
+  &.renshita {
     background: linear-gradient(135deg, rgba(192,132,252,0.10), rgba(192,132,252,0.04));
     border-color: rgba(192,132,252,0.25);
   }
@@ -470,7 +470,7 @@ const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
   .honmei & { color: #f59e0b; }
   .taikou & { color: #34d399; }
   .tanana & { color: #60a5fa; }
-  .renka  & { color: #c084fc; }
+  .renshita  & { color: #c084fc; }
 }
 
 .mc-num  { font-size: 0.82rem; color: #9ca3af; min-width: 3rem; }
@@ -525,7 +525,7 @@ const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
     &.row-honmei { background: rgba(245,158,11,0.06); }
     &.row-taikou { background: rgba(52,211,153,0.05); }
     &.row-tanana { background: rgba(96,165,250,0.05); }
-    &.row-renka  { background: rgba(192,132,252,0.04); }
+    &.row-renshita  { background: rgba(192,132,252,0.04); }
   }
 
   td { padding: 0.5rem 0.75rem; }
@@ -554,7 +554,7 @@ const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
   &.honmei { background: rgba(245,158,11,0.2);  color: #fbbf24; }
   &.taikou { background: rgba(52,211,153,0.2);  color: #34d399; }
   &.tanana { background: rgba(96,165,250,0.2);  color: #60a5fa; }
-  &.renka  { background: rgba(192,132,252,0.2); color: #c084fc; }
+  &.renshita  { background: rgba(192,132,252,0.2); color: #c084fc; }
 }
 
 .idx-val {
@@ -564,7 +564,7 @@ const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
   &.honmei { color: #fbbf24; }
   &.taikou { color: #34d399; }
   &.tanana { color: #60a5fa; }
-  &.renka  { color: #c084fc; }
+  &.renshita  { color: #c084fc; }
   &.none   { color: #6b7280; }
 }
 
