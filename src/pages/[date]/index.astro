@@ -1,0 +1,132 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { fetchAllVenues, type VenueResult, type VenueCategory } from '../../lib/venues';
+
+const { date } = Astro.params;
+
+// 日付バリデーション（YYYY-MM-DD）
+if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+  return Astro.redirect('/');
+}
+
+// 前日・翌日
+const prev = new Date(date); prev.setDate(prev.getDate() - 1);
+const next = new Date(date); next.setDate(next.getDate() + 1);
+const fmt = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const prevDate = fmt(prev);
+const nextDate = fmt(next);
+
+// 今日の日付（JST）
+const now = new Date();
+const jstOffset = 9 * 60;
+const jst = new Date(now.getTime() + (now.getTimezoneOffset() + jstOffset) * 60000);
+const todayStr = fmt(jst);
+
+// 全競馬場データ並列取得
+const results = await fetchAllVenues(date);
+const active = results.filter(r => r.data !== null);
+
+const byCategory: Record<VenueCategory, VenueResult[]> = { jra: [], nankan: [], local: [] };
+for (const r of active) {
+  byCategory[r.venue.category].push(r);
+}
+
+const categoryOrder: VenueCategory[] = ['jra', 'nankan', 'local'];
+const categoryLabels: Record<VenueCategory, string> = {
+  jra: 'JRA（中央競馬）',
+  nankan: '南関東競馬',
+  local: '地方競馬',
+};
+
+function formatDateJa(d: string): string {
+  const [y, m, day] = d.split('-');
+  return `${y}年${Number(m)}月${Number(day)}日（${['日','月','火','水','木','金','土'][new Date(d).getDay()]}）`;
+}
+
+function indexClass(idx: number): string {
+  if (idx >= 85) return 'high';
+  if (idx >= 70) return 'mid';
+  return 'normal';
+}
+---
+
+<BaseLayout
+  title={`${formatDateJa(date)} コンピ指数`}
+  description={`${formatDateJa(date)}の競馬コンピ指数。地方・JRA・南関 全24競馬場対応。`}
+>
+  <div class="page-header">
+    <h1>コンピ指数</h1>
+    <p class="subtitle">地方・JRA・南関 全24競馬場対応</p>
+  </div>
+
+  <!-- 日付ナビ -->
+  <div class="date-nav">
+    <a href={`/${prevDate}`}>← {Number(prevDate.split('-')[2])}日</a>
+    <span class="current-date">{formatDateJa(date)}</span>
+    <a href={date === todayStr ? '/' : `/${nextDate}`}>{Number(nextDate.split('-')[2])}日 →</a>
+  </div>
+
+  {date !== todayStr && (
+    <div style="margin-bottom: 0.75rem;">
+      <a href="/" style="font-size: 0.85rem; color: var(--color-text-muted);">← 今日に戻る</a>
+    </div>
+  )}
+
+  {active.length === 0 ? (
+    <div class="empty-state">
+      <div class="empty-icon">🏇</div>
+      <p>この日のコンピ指数データはありません</p>
+    </div>
+  ) : (
+    <>
+      {categoryOrder.map(cat => {
+        const venues = byCategory[cat];
+        if (venues.length === 0) return null;
+        return (
+          <div>
+            <div class="section-title">{categoryLabels[cat]}</div>
+            <div class="venue-grid">
+              {venues.map(({ venue, data }) => {
+                if (!data) return null;
+                const races = data.races ?? [];
+                const raceHighlights = races.slice(0, 6).map(race => {
+                  const top = [...race.horses].sort((a, b) => b.computerIndex - a.computerIndex)[0];
+                  return { raceNumber: race.raceNumber, top };
+                });
+                return (
+                  <div class="venue-card">
+                    <div class="card-header">
+                      <span class="venue-name">{venue.name}</span>
+                      <span class={`badge badge-${venue.category}`}>{venue.categoryLabel}</span>
+                    </div>
+                    <div class="race-count">{races.length}レース</div>
+                    <div class="race-mini-list">
+                      {raceHighlights.map(({ raceNumber, top }) => (
+                        <div class="race-mini-item">
+                          <span class="race-num">{raceNumber}R</span>
+                          <span class="horse-name">
+                            {top.number}番 {top.name}
+                          </span>
+                          <span class={`horse-index ${indexClass(top.computerIndex)}`}>
+                            {top.computerIndex}
+                          </span>
+                          <span class="horse-pop">{top.popularity}番人気</span>
+                        </div>
+                      ))}
+                      {races.length > 6 && (
+                        <div class="race-mini-item" style="justify-content: center; color: var(--color-text-muted); font-size: 0.8rem;">
+                          ...他{races.length - 6}レース
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </>
+  )}
+</BaseLayout>

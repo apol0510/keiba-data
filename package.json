@@ -1,0 +1,23 @@
+{
+  "name": "keiba-computer-web",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "コンピ指数公開サイト - 地方競馬・JRA・南関 全24競馬場対応",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "check": "astro check",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/netlify": "^6.0.0",
+    "astro": "^5.16.0",
+    "sass": "^1.83.4"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.0",
+    "typescript": "^5.7.3"
+  }
+}

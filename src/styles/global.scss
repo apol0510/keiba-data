@@ -1,0 +1,270 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --color-bg: #0f1117;
+  --color-surface: #1a1d27;
+  --color-surface-2: #22263a;
+  --color-border: #2e3347;
+  --color-text: #e8eaf6;
+  --color-text-muted: #8890b0;
+  --color-accent: #5c6ef0;
+  --color-accent-light: #8b96f5;
+  --color-jra: #1a73e8;
+  --color-nankan: #e8740a;
+  --color-local: #16a34a;
+  --color-high: #ef4444;
+  --color-mid: #f59e0b;
+  --font: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+html {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+a {
+  color: var(--color-accent-light);
+  text-decoration: none;
+  &:hover { text-decoration: underline; }
+}
+
+// Nav
+.main-nav {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+
+  .nav-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 52px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-text);
+    font-weight: 700;
+    font-size: 1rem;
+    &:hover { text-decoration: none; }
+
+    .logo-icon { font-size: 1.2rem; }
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 1.5rem;
+    font-size: 0.9rem;
+
+    a {
+      color: var(--color-text-muted);
+      &:hover { color: var(--color-text); text-decoration: none; }
+    }
+  }
+}
+
+// Main
+main {
+  flex: 1;
+  padding: 1.5rem 1rem 3rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+// Footer
+.main-footer {
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+// Category badge
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+
+  &.badge-jra    { background: rgba(26,115,232,0.2); color: #64b5f6; }
+  &.badge-nankan { background: rgba(232,116,10,0.2); color: #ffb74d; }
+  &.badge-local  { background: rgba(22,163,74,0.2);  color: #6ee7b7; }
+}
+
+// Venue card grid
+.venue-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.venue-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  transition: border-color 0.2s;
+
+  &:hover { border-color: var(--color-accent); }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+
+    .venue-name {
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+  }
+
+  .race-count {
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.75rem;
+  }
+}
+
+// Race mini list
+.race-mini-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.race-mini-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.5rem;
+  background: var(--color-surface-2);
+  border-radius: 6px;
+
+  .race-num {
+    color: var(--color-text-muted);
+    min-width: 2.5rem;
+    font-size: 0.8rem;
+  }
+
+  .horse-name {
+    flex: 1;
+    font-weight: 500;
+  }
+
+  .horse-index {
+    font-weight: 700;
+    color: var(--color-high);
+    min-width: 2rem;
+    text-align: right;
+
+    &.mid { color: var(--color-mid); }
+    &.normal { color: var(--color-text); }
+  }
+
+  .horse-pop {
+    color: var(--color-text-muted);
+    font-size: 0.78rem;
+    min-width: 3.5rem;
+    text-align: right;
+  }
+}
+
+// Section heading
+.section-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 1.5rem 0 0.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+// Page header
+.page-header {
+  margin-bottom: 0.5rem;
+
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    margin-top: 0.25rem;
+  }
+}
+
+// Date nav
+.date-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+
+  a {
+    padding: 0.3rem 0.75rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    color: var(--color-text-muted);
+    &:hover { color: var(--color-text); text-decoration: none; }
+  }
+
+  .current-date {
+    font-weight: 700;
+    font-size: 1rem;
+  }
+}
+
+// Empty state
+.empty-state {
+  text-align: center;
+  padding: 4rem 1rem;
+  color: var(--color-text-muted);
+
+  .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+  p { font-size: 1rem; }
+}
+
+@media (max-width: 640px) {
+  .venue-grid {
+    grid-template-columns: 1fr;
+  }
+  .nav-links { display: none; }
+}
