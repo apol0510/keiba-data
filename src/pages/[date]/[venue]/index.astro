@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
-import { VENUES, getComputerDataUrl, type ComputerData } from '../../../lib/venues';
+import { VENUES, getComputerDataUrl, type ComputerData, type ComputerHorse } from '../../../lib/venues';
 
 const { date, venue: venueCode } = Astro.params;
 
@@ -8,23 +8,18 @@ if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !venueCode) {
   return Astro.redirect('/');
 }
 
-// 競馬場情報を検索
 const venueInfo = VENUES.find(v => v.code === venueCode.toUpperCase());
 if (!venueInfo) {
   return Astro.redirect('/');
 }
 
-// データ取得
 let data: ComputerData | null = null;
 try {
   const url = getComputerDataUrl(date, venueInfo);
   const res = await fetch(url);
-  if (res.ok) {
-    data = await res.json();
-  }
+  if (res.ok) data = await res.json();
 } catch (_) {}
 
-// 前日・翌日
 const prev = new Date(date); prev.setDate(prev.getDate() - 1);
 const next = new Date(date); next.setDate(next.getDate() + 1);
 const fmt = (d: Date) =>
@@ -35,38 +30,84 @@ function formatDateJa(d: string): string {
   return `${y}年${Number(m)}月${Number(day)}日（${['日','月','火','水','木','金','土'][new Date(d).getDay()]}）`;
 }
 
-function indexClass(idx: number): string {
-  if (idx >= 85) return 'high';
-  if (idx >= 70) return 'mid';
-  return 'normal';
+// 印を付与（指数順で◎○▲△）
+function getMark(rank: number): { mark: string; key: string } {
+  if (rank === 0) return { mark: '◎', key: 'honmei' };
+  if (rank === 1) return { mark: '○', key: 'taikou' };
+  if (rank === 2) return { mark: '▲', key: 'tanana' };
+  if (rank <= 9)  return { mark: '△', key: 'renka' };
+  return { mark: '', key: 'none' };
 }
+
+// 各レースに印と調整済み指数を付与
+interface HorseWithMark extends ComputerHorse {
+  mark: string;
+  markKey: string;
+  displayIndex: number; // -10した表示用
+}
+
+const races = data?.races.map(race => {
+  const sorted = [...race.horses].sort((a, b) => b.computerIndex - a.computerIndex);
+  const horses: HorseWithMark[] = sorted.map((h, i) => {
+    const { mark, key } = getMark(i);
+    return {
+      ...h,
+      mark,
+      markKey: key,
+      displayIndex: h.computerIndex - 10,
+    };
+  });
+  // 馬番順に並べ直して返す（表示は馬番順）
+  const byNumber = [...horses].sort((a, b) => a.number - b.number);
+  return { ...race, horses: byNumber };
+}) ?? [];
+
+const hasJockey  = races[0]?.horses[0]?.jockey   != null;
+const hasWeight  = races[0]?.horses[0]?.weight    != null;
+const hasAgeGend = races[0]?.horses[0]?.ageGender != null;
 
 const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
 ---
 
-<BaseLayout title={title} description={`${formatDateJa(date)} ${venueInfo.name}のコンピ指数一覧`}>
+<BaseLayout title={title} description={`${formatDateJa(date)} ${venueInfo.name}のコンピ指数`}>
   <!-- パンくず -->
-  <div class="breadcrumb">
+  <nav class="breadcrumb" aria-label="パンくず">
     <a href="/">今日</a>
-    <span class="sep">›</span>
+    <span>›</span>
     <a href={`/${date}`}>{formatDateJa(date)}</a>
-    <span class="sep">›</span>
-    <span>{venueInfo.name}</span>
-  </div>
+    <span>›</span>
+    <span class="current">{venueInfo.name}</span>
+  </nav>
 
-  <div class="page-header" style="margin-top: 0.75rem;">
-    <h1>
-      {venueInfo.name}
-      <span class={`badge badge-${venueInfo.category}`}>{venueInfo.categoryLabel}</span>
-    </h1>
-    <p class="subtitle">{formatDateJa(date)}</p>
-  </div>
+  <!-- ヘッダー -->
+  <header class="venue-hero">
+    <div class="venue-hero-inner">
+      <div class="venue-hero-left">
+        <span class={`cat-pill cat-${venueInfo.category}`}>{venueInfo.categoryLabel}</span>
+        <h1 class="venue-title">{venueInfo.name}競馬</h1>
+        <p class="venue-date">{formatDateJa(date)}</p>
+      </div>
+      <div class="venue-hero-nav">
+        <a class="nav-btn" href={`/${fmt(prev)}/${venueCode}`}>
+          <span class="arrow">‹</span>
+          <span class="label">{Number(fmt(prev).split('-')[2])}日</span>
+        </a>
+        <a class="nav-btn back-btn" href={`/${date}`}>一覧</a>
+        <a class="nav-btn" href={`/${fmt(next)}/${venueCode}`}>
+          <span class="label">{Number(fmt(next).split('-')[2])}日</span>
+          <span class="arrow">›</span>
+        </a>
+      </div>
+    </div>
+  </header>
 
-  <!-- 前後日ナビ -->
-  <div class="date-nav">
-    <a href={`/${fmt(prev)}/${venueCode}`}>← {Number(fmt(prev).split('-')[2])}日</a>
-    <a href={`/${date}`} style="color: var(--color-text-muted);">一覧に戻る</a>
-    <a href={`/${fmt(next)}/${venueCode}`}>{Number(fmt(next).split('-')[2])}日 →</a>
+  <!-- 凡例 -->
+  <div class="legend">
+    <span class="leg-item honmei">◎ 本命</span>
+    <span class="leg-item taikou">○ 対抗</span>
+    <span class="leg-item tanana">▲ 単穴</span>
+    <span class="leg-item renka">△ 連下</span>
+    <span class="leg-note">指数は表示用に調整済み</span>
   </div>
 
   {!data ? (
@@ -75,47 +116,115 @@ const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
       <p>この日の{venueInfo.name}のデータはありません</p>
     </div>
   ) : (
-    <div class="race-list">
-      {data.races.map(race => {
-        const sorted = [...race.horses].sort((a, b) => b.computerIndex - a.computerIndex);
+    <div class="tab-container" id="tabContainer">
+      <!-- タブバー -->
+      <div class="tab-bar" role="tablist" id="tabBar">
+        {races.map((race, i) => (
+          <button
+            class={`tab-btn ${i === 0 ? 'active' : ''}`}
+            role="tab"
+            aria-selected={i === 0 ? 'true' : 'false'}
+            data-tab={i}
+            aria-controls={`panel-${i}`}
+          >
+            {race.raceNumber}R
+          </button>
+        ))}
+      </div>
+
+      <!-- タブパネル -->
+      {races.map((race, i) => {
+        const honmei    = race.horses.find(h => h.markKey === 'honmei');
+        const taikou    = race.horses.find(h => h.markKey === 'taikou');
+        const tanana    = race.horses.find(h => h.markKey === 'tanana');
+        const renkaList = race.horses.filter(h => h.markKey === 'renka');
+
         return (
-          <div class="race-block">
-            <div class="race-header">
-              <span class="race-label">{race.raceNumber}R</span>
-              <span class="race-name">{race.raceName}</span>
-              {race.distance && (
-                <span class="race-meta">{race.surface}{race.distance}m</span>
+          <div
+            class={`tab-panel ${i === 0 ? 'active' : ''}`}
+            role="tabpanel"
+            id={`panel-${i}`}
+            data-panel={i}
+          >
+            <!-- レース情報 -->
+            <div class="race-info-bar">
+              <span class="race-num-badge">{race.raceNumber}R</span>
+              <span class="race-name-text">{race.raceName || '　'}</span>
+              {race.distance && <span class="race-chip">{race.surface}{race.distance}m</span>}
+              {race.startTime && <span class="race-chip">{race.startTime}発走</span>}
+            </div>
+
+            <!-- 印サマリーカード -->
+            <div class="marks-summary">
+              {honmei && (
+                <div class="mark-card honmei">
+                  <span class="mc-mark">◎</span>
+                  <span class="mc-num">{honmei.number}番</span>
+                  <span class="mc-name">{honmei.name}</span>
+                  <span class="mc-idx">{honmei.displayIndex}</span>
+                </div>
               )}
-              {race.startTime && (
-                <span class="race-meta">{race.startTime}発走</span>
+              {taikou && (
+                <div class="mark-card taikou">
+                  <span class="mc-mark">○</span>
+                  <span class="mc-num">{taikou.number}番</span>
+                  <span class="mc-name">{taikou.name}</span>
+                  <span class="mc-idx">{taikou.displayIndex}</span>
+                </div>
+              )}
+              {tanana && (
+                <div class="mark-card tanana">
+                  <span class="mc-mark">▲</span>
+                  <span class="mc-num">{tanana.number}番</span>
+                  <span class="mc-name">{tanana.name}</span>
+                  <span class="mc-idx">{tanana.displayIndex}</span>
+                </div>
+              )}
+              {renkaList.length > 0 && (
+                <div class="mark-card renka">
+                  <span class="mc-mark">△</span>
+                  <span class="mc-name renka-names">
+                    {renkaList.map(h => `${h.number}番 ${h.name}`).join('　')}
+                  </span>
+                </div>
               )}
             </div>
-            <table class="horse-table">
-              <thead>
-                <tr>
-                  <th>馬番</th>
-                  <th>馬名</th>
-                  <th>指数</th>
-                  <th>人気</th>
-                  {race.horses[0]?.jockey && <th>騎手</th>}
-                  {race.horses[0]?.weight && <th>斤量</th>}
-                  {race.horses[0]?.ageGender && <th>馬齢</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {sorted.map((horse, i) => (
-                  <tr class={i === 0 ? 'top-horse' : ''}>
-                    <td class="num">{horse.number}</td>
-                    <td class="name">{horse.name}</td>
-                    <td class={`index ${indexClass(horse.computerIndex)}`}>{horse.computerIndex}</td>
-                    <td class="pop">{horse.popularity}人</td>
-                    {horse.jockey && <td class="small">{horse.jockey}</td>}
-                    {horse.weight && <td class="small">{horse.weight}</td>}
-                    {horse.ageGender && <td class="small">{horse.ageGender}</td>}
+
+            <!-- 全頭テーブル -->
+            <div class="horse-table-wrap">
+              <table class="horse-table">
+                <thead>
+                  <tr>
+                    <th class="th-mark">印</th>
+                    <th class="th-num">馬番</th>
+                    <th class="th-name">馬名</th>
+                    <th class="th-idx">指数</th>
+                    {hasJockey  && <th class="th-small">騎手</th>}
+                    {hasWeight  && <th class="th-small">斤量</th>}
+                    {hasAgeGend && <th class="th-small">馬齢</th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {race.horses.map(horse => (
+                    <tr class={`row-${horse.markKey}`}>
+                      <td class="td-mark">
+                        {horse.mark && (
+                          <span class={`mark-pill ${horse.markKey}`}>{horse.mark}</span>
+                        )}
+                      </td>
+                      <td class="td-num">{horse.number}</td>
+                      <td class="td-name">{horse.name}</td>
+                      <td class="td-idx">
+                        <span class={`idx-val ${horse.markKey}`}>{horse.displayIndex}</span>
+                      </td>
+                      {hasJockey  && <td class="td-small">{horse.jockey  ?? '—'}</td>}
+                      {hasWeight  && <td class="td-small">{horse.weight  ?? '—'}</td>}
+                      {hasAgeGend && <td class="td-small">{horse.ageGender ?? '—'}</td>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         );
       })}
@@ -124,99 +233,384 @@ const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
 </BaseLayout>
 
 <style>
+/* ── パンくず ── */
 .breadcrumb {
-  font-size: 0.82rem;
-  color: var(--color-text-muted);
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  color: #9ca3af;
+  margin-bottom: 1rem;
   flex-wrap: wrap;
 
-  a { color: var(--color-text-muted); }
-  a:hover { color: var(--color-text); }
-  .sep { opacity: 0.5; }
+  a { color: #9ca3af; &:hover { color: #fff; text-decoration: none; } }
+  .current { color: #e5e7eb; }
 }
 
-.race-list {
+/* ── ヒーローヘッダー ── */
+.venue-hero {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4c1d95 100%);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(139,92,246,0.3);
+  box-shadow: 0 4px 24px rgba(124,58,237,0.2);
+}
+
+.venue-hero-inner {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cat-pill {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 99px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.4rem;
+
+  &.cat-jra    { background: rgba(96,165,250,0.25); color: #93c5fd; border: 1px solid rgba(96,165,250,0.4); }
+  &.cat-nankan { background: rgba(251,146,60,0.25); color: #fdba74; border: 1px solid rgba(251,146,60,0.4); }
+  &.cat-local  { background: rgba(52,211,153,0.25); color: #6ee7b7; border: 1px solid rgba(52,211,153,0.4); }
+}
+
+.venue-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.venue-date {
+  font-size: 0.88rem;
+  color: rgba(255,255,255,0.6);
+  margin-top: 0.3rem;
+}
+
+.venue-hero-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.4rem 0.9rem;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.85);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.15s;
+
+  &:hover { background: rgba(255,255,255,0.2); text-decoration: none; color: #fff; }
+
+  .arrow { font-size: 1.1rem; line-height: 1; }
+}
+
+.back-btn {
+  font-size: 0.8rem;
+  padding: 0.4rem 0.75rem;
+}
+
+/* ── 凡例 ── */
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 1rem;
+  background: rgba(255,255,255,0.04);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  border: 1px solid rgba(255,255,255,0.07);
+}
+
+.leg-item {
+  font-size: 0.85rem;
+  font-weight: 600;
+
+  &.honmei { color: #f59e0b; }
+  &.taikou { color: #34d399; }
+  &.tanana { color: #60a5fa; }
+  &.renka  { color: #c084fc; }
+}
+
+.leg-note {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-left: auto;
+}
+
+/* ── タブバー ── */
+.tab-container { margin-top: 0; }
+
+.tab-bar {
+  display: flex;
+  gap: 0.3rem;
+  overflow-x: auto;
+  padding-bottom: 0.2rem;
+  margin-bottom: 1rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+
+.tab-btn {
+  flex-shrink: 0;
+  padding: 0.4rem 0.85rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: #9ca3af;
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover { background: rgba(255,255,255,0.1); color: #e5e7eb; }
+
+  &.active {
+    background: linear-gradient(135deg, #7c3aed, #5b21b6);
+    border-color: #7c3aed;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(124,58,237,0.4);
+  }
+}
+
+/* ── タブパネル ── */
+.tab-panel {
+  display: none;
+  &.active { display: block; }
+}
+
+/* ── レース情報バー ── */
+.race-info-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.race-num-badge {
+  background: linear-gradient(135deg, #7c3aed, #5b21b6);
+  color: #fff;
+  font-weight: 800;
+  font-size: 1rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 8px;
+}
+
+.race-name-text {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #e5e7eb;
+}
+
+.race-chip {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.78rem;
+  color: #9ca3af;
+}
+
+/* ── 印サマリーカード ── */
+.marks-summary {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  margin-top: 1rem;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
 }
 
-.race-block {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.race-header {
+.mark-card {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  background: var(--color-surface-2);
-  border-bottom: 1px solid var(--color-border);
-  flex-wrap: wrap;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
 
-  .race-label {
-    font-weight: 700;
-    color: var(--color-accent-light);
-    min-width: 2.5rem;
+  &.honmei {
+    background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.05));
+    border-color: rgba(245,158,11,0.3);
   }
+  &.taikou {
+    background: linear-gradient(135deg, rgba(52,211,153,0.12), rgba(52,211,153,0.05));
+    border-color: rgba(52,211,153,0.3);
+  }
+  &.tanana {
+    background: linear-gradient(135deg, rgba(96,165,250,0.12), rgba(96,165,250,0.05));
+    border-color: rgba(96,165,250,0.3);
+  }
+  &.renka {
+    background: linear-gradient(135deg, rgba(192,132,252,0.10), rgba(192,132,252,0.04));
+    border-color: rgba(192,132,252,0.25);
+    flex-wrap: wrap;
+  }
+}
 
-  .race-name {
-    font-weight: 600;
-    flex: 1;
-  }
+.mc-mark {
+  font-size: 1.3rem;
+  font-weight: 800;
+  min-width: 1.6rem;
+  text-align: center;
 
-  .race-meta {
-    font-size: 0.82rem;
-    color: var(--color-text-muted);
-  }
+  .honmei & { color: #f59e0b; }
+  .taikou & { color: #34d399; }
+  .tanana & { color: #60a5fa; }
+  .renka  & { color: #c084fc; }
+}
+
+.mc-num  { font-size: 0.82rem; color: #9ca3af; min-width: 3rem; }
+.mc-name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #f3f4f6;
+  flex: 1;
+}
+.mc-idx  {
+  font-weight: 800;
+  font-size: 1.1rem;
+  .honmei & { color: #fbbf24; }
+  .taikou & { color: #34d399; }
+  .tanana & { color: #60a5fa; }
+}
+
+.renka-names {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #d1d5db;
+  line-height: 1.7;
+}
+
+/* ── テーブル ── */
+.horse-table-wrap {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.08);
 }
 
 .horse-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
+
+  thead tr {
+    background: rgba(255,255,255,0.05);
+  }
 
   th {
-    padding: 0.4rem 0.75rem;
-    text-align: left;
-    font-size: 0.78rem;
-    color: var(--color-text-muted);
-    font-weight: 600;
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  td {
-    padding: 0.45rem 0.75rem;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-  }
-
-  tr:last-child td { border-bottom: none; }
-
-  tr.top-horse {
-    background: rgba(92,110,240,0.08);
-  }
-
-  .num  { color: var(--color-text-muted); min-width: 3rem; }
-  .name { font-weight: 500; }
-  .small { font-size: 0.82rem; color: var(--color-text-muted); }
-  .pop  { color: var(--color-text-muted); font-size: 0.85rem; }
-
-  .index {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    &.high   { color: var(--color-high); }
-    &.mid    { color: var(--color-mid); }
-    &.normal { color: var(--color-text); }
+    color: #6b7280;
+    text-align: left;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
   }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: background 0.1s;
+
+    &:last-child { border-bottom: none; }
+    &:hover { background: rgba(255,255,255,0.04); }
+
+    &.row-honmei { background: rgba(245,158,11,0.06); }
+    &.row-taikou { background: rgba(52,211,153,0.05); }
+    &.row-tanana { background: rgba(96,165,250,0.05); }
+    &.row-renka  { background: rgba(192,132,252,0.04); }
+  }
+
+  td { padding: 0.5rem 0.75rem; }
 }
 
+.th-mark { width: 2.5rem; }
+.th-num  { width: 3.5rem; }
+.th-idx  { width: 4rem; }
+.th-small { width: 5rem; }
+
+.td-mark { text-align: center; }
+.td-num  { color: #6b7280; font-size: 0.85rem; }
+.td-name { font-weight: 600; color: #f3f4f6; }
+.td-small { font-size: 0.82rem; color: #9ca3af; }
+
+.mark-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 0.9rem;
+
+  &.honmei { background: rgba(245,158,11,0.2);  color: #fbbf24; }
+  &.taikou { background: rgba(52,211,153,0.2);  color: #34d399; }
+  &.tanana { background: rgba(96,165,250,0.2);  color: #60a5fa; }
+  &.renka  { background: rgba(192,132,252,0.2); color: #c084fc; }
+}
+
+.idx-val {
+  font-weight: 700;
+  font-size: 0.95rem;
+
+  &.honmei { color: #fbbf24; }
+  &.taikou { color: #34d399; }
+  &.tanana { color: #60a5fa; }
+  &.renka  { color: #c084fc; }
+  &.none   { color: #6b7280; }
+}
+
+/* ── 空状態 ── */
+.empty-state {
+  text-align: center;
+  padding: 4rem 1rem;
+  color: #6b7280;
+  .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+}
+
+/* ── スマホ ── */
 @media (max-width: 640px) {
+  .venue-title { font-size: 1.5rem; }
+  .venue-hero-nav { width: 100%; justify-content: flex-end; }
   .horse-table { font-size: 0.82rem; }
   .horse-table th, .horse-table td { padding: 0.4rem 0.5rem; }
+  .mc-name { font-size: 0.9rem; }
+  .leg-note { display: none; }
 }
 </style>
+
+<script>
+// タブ切り替え
+const tabBar = document.getElementById('tabBar');
+const panels = document.querySelectorAll<HTMLElement>('.tab-panel');
+const tabs   = document.querySelectorAll<HTMLElement>('.tab-btn');
+
+tabBar?.addEventListener('click', (e) => {
+  const btn = (e.target as HTMLElement).closest('.tab-btn') as HTMLElement | null;
+  if (!btn) return;
+  const idx = Number(btn.dataset.tab);
+
+  tabs.forEach((t, i) => {
+    t.classList.toggle('active', i === idx);
+    t.setAttribute('aria-selected', i === idx ? 'true' : 'false');
+  });
+  panels.forEach((p, i) => {
+    p.classList.toggle('active', i === idx);
+  });
+});
+</script>
