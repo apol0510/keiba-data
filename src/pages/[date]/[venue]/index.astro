@@ -115,6 +115,22 @@ const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
     </div>
   </div>
 
+  <!-- 有料誘導バナー（JRA・南関のみ） -->
+  {venueInfo.category !== 'local' && (
+    <a href="https://keiba-intelligence.netlify.app" target="_blank" rel="noopener" class="inline-cta">
+      <div class="inline-cta-left">
+        <span class="inline-cta-label">有料版</span>
+        <span class="inline-cta-text">
+          {venueInfo.category === 'jra'
+            ? <><strong>中央競馬</strong>の買い目・予想はkeiba-intelligenceで公開中</>
+            : <><strong>南関競馬</strong>の買い目・予想はkeiba-intelligenceで公開中</>
+          }
+        </span>
+      </div>
+      <span class="inline-cta-arrow">詳細を見る →</span>
+    </a>
+  )}
+
   {!data ? (
     <div class="empty-state">
       <div class="empty-icon">📭</div>
