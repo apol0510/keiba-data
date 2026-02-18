@@ -182,10 +182,19 @@ const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
               )}
               {renkaList.length > 0 && (
                 <div class="mark-card renka">
-                  <span class="mc-mark">△</span>
-                  <span class="mc-name renka-names">
-                    {renkaList.map(h => `${h.number}番 ${h.name}`).join('　')}
-                  </span>
+                  <div class="renka-header">
+                    <span class="mc-mark">△</span>
+                    <span class="renka-label">連下</span>
+                  </div>
+                  <ul class="renka-list">
+                    {renkaList.map(h => (
+                      <li class="renka-item">
+                        <span class="renka-num">{h.number}番</span>
+                        <span class="renka-name">{h.name}</span>
+                        <span class="renka-idx">{h.displayIndex}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </div>
@@ -458,7 +467,9 @@ const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
   &.renka {
     background: linear-gradient(135deg, rgba(192,132,252,0.10), rgba(192,132,252,0.04));
     border-color: rgba(192,132,252,0.25);
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
   }
 }
 
@@ -489,11 +500,59 @@ const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
   .tanana & { color: #60a5fa; }
 }
 
-.renka-names {
-  font-size: 0.85rem;
+.renka-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  .mc-mark { min-width: auto; }
+}
+
+.renka-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #c084fc;
+  letter-spacing: 0.05em;
+}
+
+.renka-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0;
+  margin: 0;
+}
+
+.renka-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.3rem 0.5rem;
+  background: rgba(192,132,252,0.07);
+  border-radius: 6px;
+  border: 1px solid rgba(192,132,252,0.15);
+}
+
+.renka-num {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  min-width: 2.8rem;
+}
+
+.renka-name {
   font-weight: 600;
-  color: #d1d5db;
-  line-height: 1.7;
+  font-size: 0.92rem;
+  color: #e5e7eb;
+  flex: 1;
+}
+
+.renka-idx {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #c084fc;
+  min-width: 2rem;
+  text-align: right;
 }
 
 /* ── テーブル ── */
