@@ -137,11 +137,6 @@ const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
 
       <!-- タブパネル -->
       {races.map((race, i) => {
-        const honmei    = race.horses.find(h => h.markKey === 'honmei');
-        const taikou    = race.horses.find(h => h.markKey === 'taikou');
-        const tanana    = race.horses.find(h => h.markKey === 'tanana');
-        const renshitaList = race.horses.filter(h => h.markKey === 'renshita');
-
         return (
           <div
             class={`tab-panel ${i === 0 ? 'active' : ''}`}
@@ -155,42 +150,6 @@ const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
               <span class="race-name-text">{race.raceName || '　'}</span>
               {race.distance && <span class="race-chip">{race.surface}{race.distance}m</span>}
               {race.startTime && <span class="race-chip">{race.startTime}発走</span>}
-            </div>
-
-            <!-- 印サマリーカード -->
-            <div class="marks-summary marks-summary-block">
-              {honmei && (
-                <div class="mark-card honmei">
-                  <span class="mc-mark">◎</span>
-                  <span class="mc-num">{honmei.number}番</span>
-                  <span class="mc-name">{honmei.name}</span>
-                  <span class="mc-idx">{honmei.displayIndex}</span>
-                </div>
-              )}
-              {taikou && (
-                <div class="mark-card taikou">
-                  <span class="mc-mark">○</span>
-                  <span class="mc-num">{taikou.number}番</span>
-                  <span class="mc-name">{taikou.name}</span>
-                  <span class="mc-idx">{taikou.displayIndex}</span>
-                </div>
-              )}
-              {tanana && (
-                <div class="mark-card tanana">
-                  <span class="mc-mark">▲</span>
-                  <span class="mc-num">{tanana.number}番</span>
-                  <span class="mc-name">{tanana.name}</span>
-                  <span class="mc-idx">{tanana.displayIndex}</span>
-                </div>
-              )}
-              {[...renshitaList].sort((a, b) => a.number - b.number).map(h => (
-                <div class="mark-card renshita">
-                  <span class="mc-mark">△</span>
-                  <span class="mc-num">{h.number}番</span>
-                  <span class="mc-name">{h.name}</span>
-                  <span class="mc-idx">{h.displayIndex}</span>
-                </div>
-              ))}
             </div>
 
             <!-- 全頭テーブル -->
@@ -455,72 +414,6 @@ const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
   color: #9ca3af;
 }
 
-/* ── 印サマリーカード ── */
-.marks-summary-block.hidden {
-  display: none;
-}
-
-.marks-summary {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1.25rem;
-}
-
-.mark-card {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.65rem 1rem;
-  border-radius: 10px;
-  border: 1px solid transparent;
-
-  &.honmei {
-    background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.05));
-    border-color: rgba(245,158,11,0.3);
-  }
-  &.taikou {
-    background: linear-gradient(135deg, rgba(52,211,153,0.12), rgba(52,211,153,0.05));
-    border-color: rgba(52,211,153,0.3);
-  }
-  &.tanana {
-    background: linear-gradient(135deg, rgba(96,165,250,0.12), rgba(96,165,250,0.05));
-    border-color: rgba(96,165,250,0.3);
-  }
-  &.renshita {
-    background: linear-gradient(135deg, rgba(192,132,252,0.10), rgba(192,132,252,0.04));
-    border-color: rgba(192,132,252,0.25);
-  }
-}
-
-.mc-mark {
-  font-size: 1.3rem;
-  font-weight: 800;
-  min-width: 1.6rem;
-  text-align: center;
-
-  .honmei & { color: #f59e0b; }
-  .taikou & { color: #34d399; }
-  .tanana & { color: #60a5fa; }
-  .renshita  & { color: #c084fc; }
-}
-
-.mc-num  { font-size: 0.82rem; color: #9ca3af; min-width: 3rem; }
-.mc-name {
-  font-weight: 700;
-  font-size: 1rem;
-  color: #f3f4f6;
-  flex: 1;
-}
-.mc-idx  {
-  font-weight: 800;
-  font-size: 1.1rem;
-  .honmei & { color: #fbbf24; }
-  .taikou & { color: #34d399; }
-  .tanana & { color: #60a5fa; }
-}
-
-
 /* ── テーブル ── */
 .horse-table-wrap {
   border-radius: 12px;
@@ -654,10 +547,6 @@ function sortAllTables(sort: 'number' | 'index') {
     rows.forEach(r => tbody.appendChild(r));
   });
 
-  // 指数順の時はサマリーカードを非表示
-  document.querySelectorAll<HTMLElement>('.marks-summary-block').forEach(el => {
-    el.classList.toggle('hidden', sort === 'index');
-  });
 }
 
 document.getElementById('sortToggle')?.addEventListener('click', (e) => {
