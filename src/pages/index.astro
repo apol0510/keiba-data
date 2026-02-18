@@ -89,7 +89,7 @@ function indexClass(idx: number): string {
                   return { raceNumber: race.raceNumber, top };
                 });
                 return (
-                  <div class="venue-card">
+                  <a class="venue-card" href={`/${today}/${venue.code}`}>
                     <div class="card-header">
                       <span class="venue-name">{venue.name}</span>
                       <span class={`badge badge-${venue.category}`}>{venue.categoryLabel}</span>
@@ -114,7 +114,7 @@ function indexClass(idx: number): string {
                         </div>
                       )}
                     </div>
-                  </div>
+                  </a>
                 );
               })}
             </div>

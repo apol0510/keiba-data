@@ -1,0 +1,222 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { VENUES, getComputerDataUrl, type ComputerData } from '../../../lib/venues';
+
+const { date, venue: venueCode } = Astro.params;
+
+if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !venueCode) {
+  return Astro.redirect('/');
+}
+
+// 競馬場情報を検索
+const venueInfo = VENUES.find(v => v.code === venueCode.toUpperCase());
+if (!venueInfo) {
+  return Astro.redirect('/');
+}
+
+// データ取得
+let data: ComputerData | null = null;
+try {
+  const url = getComputerDataUrl(date, venueInfo);
+  const res = await fetch(url);
+  if (res.ok) {
+    data = await res.json();
+  }
+} catch (_) {}
+
+// 前日・翌日
+const prev = new Date(date); prev.setDate(prev.getDate() - 1);
+const next = new Date(date); next.setDate(next.getDate() + 1);
+const fmt = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+function formatDateJa(d: string): string {
+  const [y, m, day] = d.split('-');
+  return `${y}年${Number(m)}月${Number(day)}日（${['日','月','火','水','木','金','土'][new Date(d).getDay()]}）`;
+}
+
+function indexClass(idx: number): string {
+  if (idx >= 85) return 'high';
+  if (idx >= 70) return 'mid';
+  return 'normal';
+}
+
+const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
+---
+
+<BaseLayout title={title} description={`${formatDateJa(date)} ${venueInfo.name}のコンピ指数一覧`}>
+  <!-- パンくず -->
+  <div class="breadcrumb">
+    <a href="/">今日</a>
+    <span class="sep">›</span>
+    <a href={`/${date}`}>{formatDateJa(date)}</a>
+    <span class="sep">›</span>
+    <span>{venueInfo.name}</span>
+  </div>
+
+  <div class="page-header" style="margin-top: 0.75rem;">
+    <h1>
+      {venueInfo.name}
+      <span class={`badge badge-${venueInfo.category}`}>{venueInfo.categoryLabel}</span>
+    </h1>
+    <p class="subtitle">{formatDateJa(date)}</p>
+  </div>
+
+  <!-- 前後日ナビ -->
+  <div class="date-nav">
+    <a href={`/${fmt(prev)}/${venueCode}`}>← {Number(fmt(prev).split('-')[2])}日</a>
+    <a href={`/${date}`} style="color: var(--color-text-muted);">一覧に戻る</a>
+    <a href={`/${fmt(next)}/${venueCode}`}>{Number(fmt(next).split('-')[2])}日 →</a>
+  </div>
+
+  {!data ? (
+    <div class="empty-state">
+      <div class="empty-icon">📭</div>
+      <p>この日の{venueInfo.name}のデータはありません</p>
+    </div>
+  ) : (
+    <div class="race-list">
+      {data.races.map(race => {
+        const sorted = [...race.horses].sort((a, b) => b.computerIndex - a.computerIndex);
+        return (
+          <div class="race-block">
+            <div class="race-header">
+              <span class="race-label">{race.raceNumber}R</span>
+              <span class="race-name">{race.raceName}</span>
+              {race.distance && (
+                <span class="race-meta">{race.surface}{race.distance}m</span>
+              )}
+              {race.startTime && (
+                <span class="race-meta">{race.startTime}発走</span>
+              )}
+            </div>
+            <table class="horse-table">
+              <thead>
+                <tr>
+                  <th>馬番</th>
+                  <th>馬名</th>
+                  <th>指数</th>
+                  <th>人気</th>
+                  {race.horses[0]?.jockey && <th>騎手</th>}
+                  {race.horses[0]?.weight && <th>斤量</th>}
+                  {race.horses[0]?.ageGender && <th>馬齢</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((horse, i) => (
+                  <tr class={i === 0 ? 'top-horse' : ''}>
+                    <td class="num">{horse.number}</td>
+                    <td class="name">{horse.name}</td>
+                    <td class={`index ${indexClass(horse.computerIndex)}`}>{horse.computerIndex}</td>
+                    <td class="pop">{horse.popularity}人</td>
+                    {horse.jockey && <td class="small">{horse.jockey}</td>}
+                    {horse.weight && <td class="small">{horse.weight}</td>}
+                    {horse.ageGender && <td class="small">{horse.ageGender}</td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
+    </div>
+  )}
+</BaseLayout>
+
+<style>
+.breadcrumb {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+
+  a { color: var(--color-text-muted); }
+  a:hover { color: var(--color-text); }
+  .sep { opacity: 0.5; }
+}
+
+.race-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.race-block {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.race-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--color-surface-2);
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+
+  .race-label {
+    font-weight: 700;
+    color: var(--color-accent-light);
+    min-width: 2.5rem;
+  }
+
+  .race-name {
+    font-weight: 600;
+    flex: 1;
+  }
+
+  .race-meta {
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+  }
+}
+
+.horse-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+
+  th {
+    padding: 0.4rem 0.75rem;
+    text-align: left;
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    font-weight: 600;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  td {
+    padding: 0.45rem 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  tr.top-horse {
+    background: rgba(92,110,240,0.08);
+  }
+
+  .num  { color: var(--color-text-muted); min-width: 3rem; }
+  .name { font-weight: 500; }
+  .small { font-size: 0.82rem; color: var(--color-text-muted); }
+  .pop  { color: var(--color-text-muted); font-size: 0.85rem; }
+
+  .index {
+    font-weight: 700;
+    &.high   { color: var(--color-high); }
+    &.mid    { color: var(--color-mid); }
+    &.normal { color: var(--color-text); }
+  }
+}
+
+@media (max-width: 640px) {
+  .horse-table { font-size: 0.82rem; }
+  .horse-table th, .horse-table td { padding: 0.4rem 0.5rem; }
+}
+</style>
