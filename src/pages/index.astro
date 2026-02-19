@@ -42,7 +42,7 @@ function formatDateJa(date: string): string {
   return `${y}年${Number(m)}月${Number(d)}日（${['日','月','火','水','木','金','土'][new Date(date).getDay()]}）`;
 }
 
-// コンピ指数の色クラス
+// AI指数の色クラス
 function indexClass(idx: number): string {
   if (idx >= 85) return 'high';
   if (idx >= 70) return 'mid';
@@ -51,11 +51,11 @@ function indexClass(idx: number): string {
 ---
 
 <BaseLayout
-  title={`${formatDateJa(today)} コンピ指数`}
-  description={`${formatDateJa(today)}の競馬コンピ指数。地方・JRA・南関 全24競馬場対応。`}
+  title={`${formatDateJa(today)} AI指数`}
+  description={`${formatDateJa(today)}の競馬AI指数。地方・JRA・南関 全24競馬場対応。`}
 >
   <div class="page-header">
-    <h1>コンピ指数</h1>
+    <h1>AI指数</h1>
     <p class="subtitle">地方・JRA・南関 全24競馬場対応</p>
   </div>
 
@@ -69,7 +69,7 @@ function indexClass(idx: number): string {
   {active.length === 0 ? (
     <div class="empty-state">
       <div class="empty-icon">🏇</div>
-      <p>本日はコンピ指数データがありません</p>
+      <p>本日はAI指数データがありません</p>
     </div>
   ) : (
     <>

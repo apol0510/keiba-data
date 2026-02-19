@@ -6,10 +6,10 @@ interface Props {
 
 const {
   title,
-  description = '地方競馬・JRA・南関 全24競馬場のコンピ指数を公開'
+  description = '地方競馬・JRA・南関 全24競馬場のAI指数を公開'
 } = Astro.props;
 
-const siteTitle = title === 'コンピ指数' ? title : `${title} | コンピ指数`;
+const siteTitle = title === 'AI指数' ? title : `${title} | AI指数`;
 ---
 
 <!DOCTYPE html>
@@ -35,7 +35,7 @@ const siteTitle = title === 'コンピ指数' ? title : `${title} | コンピ指
       <div class="nav-content">
         <a href="/" class="logo">
           <span class="logo-icon">📊</span>
-          <span class="logo-text">コンピ指数</span>
+          <span class="logo-text">AI指数</span>
         </a>
         <div class="nav-links">
           <a href="/">今日の開催</a>
@@ -59,7 +59,7 @@ const siteTitle = title === 'コンピ指数' ? title : `${title} | コンピ指
           keiba-intelligence で買い目を確認 →
         </a>
       </div>
-      <p class="footer-copy">コンピ指数 - 地方・JRA・南関 全24競馬場対応</p>
+      <p class="footer-copy">AI指数 - 地方・JRA・南関 全24競馬場対応</p>
     </div>
   </footer>
 </body>

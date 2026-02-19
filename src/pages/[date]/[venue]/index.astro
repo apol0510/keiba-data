@@ -68,10 +68,10 @@ const hasJockey  = races[0]?.horses[0]?.jockey   != null;
 const hasWeight  = races[0]?.horses[0]?.weight    != null;
 const hasAgeGend = races[0]?.horses[0]?.ageGender != null;
 
-const title = `${venueInfo.name} ${formatDateJa(date)} コンピ指数`;
+const title = `${venueInfo.name} ${formatDateJa(date)} AI指数`;
 ---
 
-<BaseLayout title={title} description={`${formatDateJa(date)} ${venueInfo.name}のコンピ指数`}>
+<BaseLayout title={title} description={`${formatDateJa(date)} ${venueInfo.name}のAI指数`}>
   <!-- パンくず -->
   <nav class="breadcrumb" aria-label="パンくず">
     <a href="/">今日</a>
