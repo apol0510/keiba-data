@@ -68,6 +68,7 @@ const races = data?.races.map(race => {
 }) ?? [];
 
 const hasJockey  = races[0]?.horses[0]?.jockey   != null;
+const hasTrainer = races[0]?.horses[0]?.trainer  != null;
 const hasWeight  = races[0]?.horses[0]?.weight    != null;
 const hasAgeGend = races[0]?.horses[0]?.ageGender != null;
 
@@ -183,6 +184,7 @@ const title = `${venueInfo.name} ${formatDateJa(date)} AI指数`;
                     <th class="th-name">馬名</th>
                     <th class="th-idx">指数</th>
                     {hasJockey  && <th class="th-small">騎手</th>}
+                    {hasTrainer && <th class="th-small">調教師</th>}
                     {hasWeight  && <th class="th-small">斤量</th>}
                     {hasAgeGend && <th class="th-small">馬齢</th>}
                   </tr>
@@ -205,6 +207,7 @@ const title = `${venueInfo.name} ${formatDateJa(date)} AI指数`;
                         <span class={`idx-val ${horse.markKey}`}>{horse.displayIndex}</span>
                       </td>
                       {hasJockey  && <td class="td-small">{horse.jockey  ?? '—'}</td>}
+                      {hasTrainer && <td class="td-small">{horse.trainer ?? '—'}</td>}
                       {hasWeight  && <td class="td-small">{horse.weight  ?? '—'}</td>}
                       {hasAgeGend && <td class="td-small">{horse.ageGender ?? '—'}</td>}
                     </tr>
