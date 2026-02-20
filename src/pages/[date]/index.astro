@@ -92,7 +92,8 @@ function indexClass(idx: number): string {
                 const races = data.races ?? [];
                 const raceHighlights = races.slice(0, 6).map(race => {
                   const top = [...race.horses].sort((a, b) => b.computerIndex - a.computerIndex)[0];
-                  return { raceNumber: race.raceNumber, top };
+                  // 最高馬は本命なので-10
+                  return { raceNumber: race.raceNumber, top, displayIndex: top.computerIndex - 10 };
                 });
                 return (
                   <a class="venue-card" href={`/${date}/${venue.code}`}>
@@ -102,14 +103,14 @@ function indexClass(idx: number): string {
                     </div>
                     <div class="race-count">{races.length}レース</div>
                     <div class="race-mini-list">
-                      {raceHighlights.map(({ raceNumber, top }) => (
+                      {raceHighlights.map(({ raceNumber, top, displayIndex }) => (
                         <div class="race-mini-item">
                           <span class="race-num">{raceNumber}R</span>
                           <span class="horse-name">
                             {top.number}番 {top.name}
                           </span>
                           <span class={`horse-index ${indexClass(top.computerIndex)}`}>
-                            {top.computerIndex - 10}
+                            {displayIndex}
                           </span>
                         </div>
                       ))}

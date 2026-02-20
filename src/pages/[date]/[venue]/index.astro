@@ -51,12 +51,15 @@ const races = data?.races.map(race => {
   // 34以下（displayIndex = computerIndex - 10 <= 34）を除外してrankを付与
   let markRank = 0;
   const horses: HorseWithMark[] = sorted.map((h) => {
-    const displayIndex = h.computerIndex - 10;
-    if (displayIndex <= 34) {
-      return { ...h, mark: '', markKey: 'none', displayIndex };
+    const tempDisplayIndex = h.computerIndex - 10;
+    if (tempDisplayIndex <= 34) {
+      // 無印: -11
+      return { ...h, mark: '', markKey: 'none', displayIndex: h.computerIndex - 11 };
     }
     const { mark, key } = getMark(markRank);
     markRank++;
+    // 本命(rank=0)は-10、それ以外は-11
+    const displayIndex = markRank === 1 ? h.computerIndex - 10 : h.computerIndex - 11;
     return { ...h, mark, markKey: key, displayIndex };
   });
   // 馬番順に並べ直して返す（表示は馬番順）
