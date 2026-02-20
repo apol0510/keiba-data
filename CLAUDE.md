@@ -172,9 +172,9 @@ keiba-computer-web/
 #### **印付与ロジック**
 
 ```typescript
-// displayIndex = computerIndex - 10
-// displayIndex <= 34 → 無印（表示なし）
-// 残りを指数降順で印付与：
+// 1. まず computerIndex - 10 で判定
+// 2. displayIndex <= 34 → 無印（表示なし）
+// 3. 残りを指数降順で印付与
 
 function getMark(rank: number): { mark: string; key: string } {
   if (rank === 0) return { mark: '◎', key: 'honmei' };
@@ -183,6 +183,10 @@ function getMark(rank: number): { mark: string; key: string } {
   if (rank <= 9)  return { mark: '△', key: 'renshita' };
   return { mark: '', key: 'none' };
 }
+
+// 表示用指数の計算：
+// - 本命（◎）: displayIndex = computerIndex - 10
+// - それ以外（○▲△無印）: displayIndex = computerIndex - 11
 ```
 
 **印の名称（正しい読み）:**
@@ -196,7 +200,7 @@ function getMark(rank: number): { mark: string; key: string } {
 - レースタブで切り替え（1R〜最終R）
 - ソートトグル：馬番順 ⇔ 指数順
 - 表形式のみ（サマリーカードは廃止）
-- displayIndex（computerIndex - 10）を表示
+- **本命のみ -10、それ以外は -11** した値を表示
 
 ---
 
@@ -234,7 +238,11 @@ npm run build
 
 ---
 
-## 🐛 **バグ修正履歴** 🐛
+## 🐛 **バグ修正・変更履歴** 🐛
+
+### **2026-02-20: 指数表示ロジック変更**
+- 競馬場カードプレビューの指数を -10 に修正（-10前の値が表示されていた）
+- 印付与ロジック変更：本命のみ -10、それ以外（○▲△無印）は -11
 
 ### **2026-02-18: 初回リリース**
 - プロジェクト作成、24競馬場対応
@@ -246,7 +254,7 @@ npm run build
 
 ---
 
-**📅 最終更新日**: 2026-02-18
-**🏁 Project Phase**: 初回リリース完了
+**📅 最終更新日**: 2026-02-20
+**🏁 Project Phase**: v1.1 運用中
 **🎯 Next Priority**: 運用継続・UI改善
-**📊 進捗率**: v1.0 完成
+**📊 進捗率**: v1.1 完成
