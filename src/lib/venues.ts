@@ -25,8 +25,9 @@ export const VENUES: VenueInfo[] = [
   { code: 'FUN', name: '船橋',  category: 'nankan', categoryLabel: '南関' },
   { code: 'KAW', name: '川崎',  category: 'nankan', categoryLabel: '南関' },
   { code: 'URA', name: '浦和',  category: 'nankan', categoryLabel: '南関' },
-  // 地方（10場）
+  // 地方（11場）
   { code: 'MON', name: '門別',  category: 'local',  categoryLabel: '地方' },
+  { code: 'OBI', name: '帯広',  category: 'local',  categoryLabel: '地方' },
   { code: 'MOR', name: '盛岡',  category: 'local',  categoryLabel: '地方' },
   { code: 'MIZ', name: '水沢',  category: 'local',  categoryLabel: '地方' },
   { code: 'KNZ', name: '金沢',  category: 'local',  categoryLabel: '地方' },
