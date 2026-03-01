@@ -42,9 +42,9 @@ const keywords = '競馬予想,ブログ,AI指数,コンピ指数,地方競馬,J
       <p class="subtitle">AI指数を使った予想記事を公開中</p>
 
       <nav class="date-nav">
-        <a href={`/blog?date=${formatDate(yesterday)}`} class="nav-btn">← 前日</a>
+        <a href={`/blog/${formatDate(yesterday)}`} class="nav-btn">← 前日</a>
         <span class="current-date">{dateStr}</span>
-        <a href={`/blog?date=${formatDate(tomorrow)}`} class="nav-btn">翌日 →</a>
+        <a href={`/blog/${formatDate(tomorrow)}`} class="nav-btn">翌日 →</a>
       </nav>
     </header>
 
