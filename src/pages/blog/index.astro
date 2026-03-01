@@ -1,0 +1,342 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { fetchAllVenues } from '../../lib/venues';
+
+// 今日の日付を取得
+const today = new Date();
+const dateStr = today.toISOString().split('T')[0];
+
+// 今日のデータを取得
+const venueResults = await fetchAllVenues(dateStr);
+
+// データがある競馬場のみフィルタリング
+const availableVenues = venueResults.filter(r => r.data !== null);
+
+// カテゴリ別にグルーピング
+const jraVenues = availableVenues.filter(r => r.venue.category === 'jra');
+const nankanVenues = availableVenues.filter(r => r.venue.category === 'nankan');
+const localVenues = availableVenues.filter(r => r.venue.category === 'local');
+
+// 日付ナビゲーション
+const yesterday = new Date(today);
+yesterday.setDate(yesterday.getDate() - 1);
+const tomorrow = new Date(today);
+tomorrow.setDate(tomorrow.getDate() + 1);
+
+const formatDate = (d: Date) => d.toISOString().split('T')[0];
+---
+
+<BaseLayout title="予想ブログ一覧">
+  <div class="blog-list-container">
+    <header class="page-header">
+      <h1>🗞️ 予想ブログ</h1>
+      <p class="subtitle">AI指数を使った予想記事を公開中</p>
+
+      <nav class="date-nav">
+        <a href={`/blog?date=${formatDate(yesterday)}`} class="nav-btn">← 前日</a>
+        <span class="current-date">{dateStr}</span>
+        <a href={`/blog?date=${formatDate(tomorrow)}`} class="nav-btn">翌日 →</a>
+      </nav>
+    </header>
+
+    {availableVenues.length === 0 ? (
+      <div class="no-data">
+        <p>本日は開催データがありません</p>
+        <a href="/">トップページへ戻る</a>
+      </div>
+    ) : (
+      <>
+        {jraVenues.length > 0 && (
+          <section class="category-section">
+            <h2 class="category-title">JRA（中央競馬）</h2>
+            <div class="venue-grid">
+              {jraVenues.map(result => (
+                <a href={`/blog/${dateStr}/${result.venue.code}`} class="venue-card">
+                  <div class="card-header">
+                    <span class="venue-name">{result.venue.name}</span>
+                    <span class="race-count">{result.data!.races.length}R</span>
+                  </div>
+                  <div class="card-preview">
+                    {result.data!.races.slice(0, 3).map(race => {
+                      const topHorse = [...race.horses].sort((a, b) => b.computerIndex - a.computerIndex)[0];
+                      const displayIdx = topHorse.computerIndex - 10;
+                      return displayIdx > 34 ? (
+                        <div class="preview-race">
+                          <span class="race-num">{race.raceNumber}R</span>
+                          <span class="horse-name">{topHorse.name}</span>
+                          <span class="index">{displayIdx}</span>
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
+                  <div class="card-footer">
+                    <span class="read-more">記事を読む →</span>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {nankanVenues.length > 0 && (
+          <section class="category-section">
+            <h2 class="category-title">南関東</h2>
+            <div class="venue-grid">
+              {nankanVenues.map(result => (
+                <a href={`/blog/${dateStr}/${result.venue.code}`} class="venue-card">
+                  <div class="card-header">
+                    <span class="venue-name">{result.venue.name}</span>
+                    <span class="race-count">{result.data!.races.length}R</span>
+                  </div>
+                  <div class="card-preview">
+                    {result.data!.races.slice(0, 3).map(race => {
+                      const topHorse = [...race.horses].sort((a, b) => b.computerIndex - a.computerIndex)[0];
+                      const displayIdx = topHorse.computerIndex - 10;
+                      return displayIdx > 34 ? (
+                        <div class="preview-race">
+                          <span class="race-num">{race.raceNumber}R</span>
+                          <span class="horse-name">{topHorse.name}</span>
+                          <span class="index">{displayIdx}</span>
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
+                  <div class="card-footer">
+                    <span class="read-more">記事を読む →</span>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {localVenues.length > 0 && (
+          <section class="category-section">
+            <h2 class="category-title">地方競馬</h2>
+            <div class="venue-grid">
+              {localVenues.map(result => (
+                <a href={`/blog/${dateStr}/${result.venue.code}`} class="venue-card">
+                  <div class="card-header">
+                    <span class="venue-name">{result.venue.name}</span>
+                    <span class="race-count">{result.data!.races.length}R</span>
+                  </div>
+                  <div class="card-preview">
+                    {result.data!.races.slice(0, 3).map(race => {
+                      const topHorse = [...race.horses].sort((a, b) => b.computerIndex - a.computerIndex)[0];
+                      const displayIdx = topHorse.computerIndex - 10;
+                      return displayIdx > 34 ? (
+                        <div class="preview-race">
+                          <span class="race-num">{race.raceNumber}R</span>
+                          <span class="horse-name">{topHorse.name}</span>
+                          <span class="index">{displayIdx}</span>
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
+                  <div class="card-footer">
+                    <span class="read-more">記事を読む →</span>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
+      </>
+    )}
+  </div>
+</BaseLayout>
+
+<style lang="scss">
+  .blog-list-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+  }
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 3rem;
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      color: #fff;
+    }
+
+    .subtitle {
+      color: #8e8e93;
+      font-size: 1.125rem;
+      margin-bottom: 2rem;
+    }
+  }
+
+  .date-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+
+    .nav-btn {
+      padding: 0.5rem 1rem;
+      background: #2c2c2e;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: background 0.2s;
+
+      &:hover {
+        background: #3a3a3c;
+      }
+    }
+
+    .current-date {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #00d4ff;
+    }
+  }
+
+  .no-data {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: #1c1c1e;
+    border-radius: 12px;
+
+    p {
+      font-size: 1.25rem;
+      color: #8e8e93;
+      margin-bottom: 1rem;
+    }
+
+    a {
+      color: #007aff;
+      text-decoration: none;
+      font-weight: 600;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  .category-section {
+    margin-bottom: 3rem;
+
+    .category-title {
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+      color: #fff;
+      padding-left: 0.5rem;
+      border-left: 4px solid #5e5ce6;
+    }
+  }
+
+  .venue-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .venue-card {
+    display: block;
+    background: #1c1c1e;
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-decoration: none;
+    transition: all 0.2s;
+    border: 1px solid #2c2c2e;
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(94, 92, 230, 0.3);
+      border-color: #5e5ce6;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #2c2c2e;
+
+      .venue-name {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #fff;
+      }
+
+      .race-count {
+        background: #5e5ce6;
+        color: #fff;
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+    }
+
+    .card-preview {
+      margin-bottom: 1rem;
+
+      .preview-race {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem 0;
+        color: #e5e5e7;
+
+        .race-num {
+          font-weight: 600;
+          color: #00d4ff;
+          min-width: 2.5rem;
+        }
+
+        .horse-name {
+          flex: 1;
+          font-size: 0.875rem;
+        }
+
+        .index {
+          font-weight: 600;
+          color: #32d74b;
+          font-family: 'Courier New', monospace;
+        }
+      }
+    }
+
+    .card-footer {
+      padding-top: 1rem;
+      border-top: 1px solid #2c2c2e;
+      text-align: right;
+
+      .read-more {
+        color: #007aff;
+        font-weight: 600;
+        font-size: 0.875rem;
+      }
+    }
+  }
+
+  @media (max-width: 768px) {
+    .page-header h1 {
+      font-size: 2rem;
+    }
+
+    .venue-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .date-nav {
+      flex-direction: column;
+      gap: 1rem;
+
+      .nav-btn {
+        width: 100%;
+        text-align: center;
+      }
+    }
+  }
+</style>

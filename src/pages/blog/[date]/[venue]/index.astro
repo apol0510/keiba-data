@@ -1,0 +1,377 @@
+---
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import { VENUES, getComputerDataUrl, type VenueInfo } from '../../../../lib/venues';
+import { generateBlogArticle } from '../../../../lib/blog';
+
+export async function getStaticPaths() {
+  return [];
+}
+
+const { date, venue: venueCode } = Astro.params;
+
+// 競馬場情報取得
+const venue = VENUES.find(v => v.code === venueCode);
+
+if (!venue) {
+  return Astro.redirect('/404');
+}
+
+// データ取得
+const url = getComputerDataUrl(date!, venue);
+let article = null;
+let error = null;
+
+try {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('データが見つかりません');
+  const data = await res.json();
+  article = generateBlogArticle(data, venue);
+} catch (e) {
+  error = String(e);
+}
+
+const title = article ? article.title : `${venue.name}競馬予想ブログ`;
+---
+
+<BaseLayout title={title}>
+  <div class="blog-container">
+    {error ? (
+      <div class="error">
+        <h1>エラー</h1>
+        <p>{error}</p>
+        <a href={`/${date}`}>← {date}の競馬場一覧へ戻る</a>
+      </div>
+    ) : article ? (
+      <article class="blog-article">
+        <header class="blog-header">
+          <div class="breadcrumb">
+            <a href="/">トップ</a>
+            <span>/</span>
+            <a href="/blog">ブログ一覧</a>
+            <span>/</span>
+            <a href={`/blog/${date}`}>{date}</a>
+          </div>
+          <h1>{article.title}</h1>
+          <p class="meta">
+            <span class="category">{venue.categoryLabel}</span>
+            <span class="date">{article.date}</span>
+          </p>
+        </header>
+
+        <div class="blog-content" set:html={
+          (() => {
+            const lines = article.content.split('\n');
+            let html = '';
+            let inTable = false;
+            let tableRows: string[] = [];
+
+            for (let i = 0; i < lines.length; i++) {
+              const line = lines[i];
+
+              // テーブル行の検出
+              if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
+                // ヘッダー区切り行をスキップ
+                if (line.includes(':--:') || line.includes(':-:')) {
+                  continue;
+                }
+
+                if (!inTable) {
+                  inTable = true;
+                  tableRows = [];
+                }
+
+                const cells = line.split('|').filter(c => c.trim()).map(c => c.trim());
+                const isHeader = line.includes('印') || line.includes('馬番') || line.includes('馬名');
+                const tag = isHeader ? 'th' : 'td';
+                tableRows.push(`<tr>${cells.map(c => `<${tag}>${c}</${tag}>`).join('')}</tr>`);
+              } else {
+                // テーブル終了
+                if (inTable) {
+                  html += `<table>${tableRows.join('')}</table>`;
+                  inTable = false;
+                  tableRows = [];
+                }
+
+                // 通常の行処理
+                if (line.startsWith('# ')) {
+                  html += `<h1>${line.slice(2)}</h1>`;
+                } else if (line.startsWith('## ')) {
+                  html += `<h2>${line.slice(3)}</h2>`;
+                } else if (line.startsWith('### ')) {
+                  html += `<h3>${line.slice(4)}</h3>`;
+                } else if (line.startsWith('#### ')) {
+                  html += `<h4>${line.slice(5)}</h4>`;
+                } else if (line.startsWith('---')) {
+                  html += '<hr>';
+                } else if (line.trim() === '') {
+                  // 空行はスキップ
+                } else {
+                  html += `<p>${line.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')}</p>`;
+                }
+              }
+            }
+
+            // 最後にテーブルが残っている場合
+            if (inTable) {
+              html += `<table>${tableRows.join('')}</table>`;
+            }
+
+            return html;
+          })()
+        } />
+
+        <footer class="blog-footer">
+          <a href={`/${date}/${venueCode}`} class="btn-primary">
+            指数データを見る →
+          </a>
+          <a href="/blog" class="btn-secondary">
+            ← ブログ一覧へ戻る
+          </a>
+        </footer>
+      </article>
+    ) : null}
+  </div>
+</BaseLayout>
+
+<style lang="scss">
+  .blog-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+  }
+
+  .error {
+    background: rgba(255, 59, 48, 0.1);
+    border: 1px solid rgba(255, 59, 48, 0.3);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+
+    h1 {
+      color: #ff3b30;
+      margin-bottom: 1rem;
+    }
+
+    a {
+      color: #007aff;
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  .blog-article {
+    background: #1c1c1e;
+    border-radius: 12px;
+    padding: 2rem;
+  }
+
+  .blog-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #2c2c2e;
+
+    .breadcrumb {
+      font-size: 0.875rem;
+      color: #8e8e93;
+      margin-bottom: 1rem;
+
+      a {
+        color: #007aff;
+        text-decoration: none;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+
+      span {
+        margin: 0 0.5rem;
+      }
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      color: #fff;
+    }
+
+    .meta {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.875rem;
+      color: #8e8e93;
+
+      .category {
+        background: #5e5ce6;
+        color: #fff;
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-weight: 600;
+      }
+    }
+  }
+
+  .blog-content {
+    line-height: 1.8;
+    color: #e5e5e7;
+
+    :global(h1) {
+      font-size: 1.75rem;
+      margin: 2rem 0 1rem;
+      color: #fff;
+      border-bottom: 2px solid #5e5ce6;
+      padding-bottom: 0.5rem;
+    }
+
+    :global(h2) {
+      font-size: 1.5rem;
+      margin: 1.75rem 0 1rem;
+      color: #fff;
+    }
+
+    :global(h3) {
+      font-size: 1.25rem;
+      margin: 1.5rem 0 0.75rem;
+      color: #00d4ff;
+    }
+
+    :global(h4) {
+      font-size: 1.125rem;
+      margin: 1.25rem 0 0.5rem;
+      color: #32d74b;
+    }
+
+    :global(p) {
+      margin: 0.75rem 0;
+    }
+
+    :global(hr) {
+      border: none;
+      border-top: 1px solid #2c2c2e;
+      margin: 2rem 0;
+    }
+
+    :global(table) {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      background: #2c2c2e;
+      border-radius: 8px;
+      overflow: hidden;
+
+      th, td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #3a3a3c;
+      }
+
+      th {
+        background: #3a3a3c;
+        font-weight: 600;
+        color: #fff;
+        text-align: center;
+      }
+
+      td {
+        text-align: center;
+
+        &:first-child {
+          text-align: center;
+          width: 50px;
+        }
+
+        &:nth-child(2) {
+          text-align: center;
+          width: 80px;
+        }
+
+        &:nth-child(3) {
+          text-align: left;
+          padding-left: 1rem;
+        }
+
+        &:last-child {
+          text-align: center;
+          width: 80px;
+          font-weight: 600;
+          color: #00d4ff;
+        }
+      }
+
+      tr:last-child td {
+        border-bottom: none;
+      }
+
+      tr:hover {
+        background: rgba(94, 92, 230, 0.1);
+      }
+    }
+
+    :global(strong) {
+      color: #00d4ff;
+      font-weight: 600;
+    }
+  }
+
+  .blog-footer {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid #2c2c2e;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+
+    .btn-primary,
+    .btn-secondary {
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #5e5ce6;
+      color: #fff;
+
+      &:hover {
+        background: #4f4ddb;
+      }
+    }
+
+    .btn-secondary {
+      background: #2c2c2e;
+      color: #fff;
+
+      &:hover {
+        background: #3a3a3c;
+      }
+    }
+  }
+
+  @media (max-width: 768px) {
+    .blog-container {
+      padding: 1rem 0.5rem;
+    }
+
+    .blog-article {
+      padding: 1.5rem;
+    }
+
+    .blog-header h1 {
+      font-size: 1.5rem;
+    }
+
+    .blog-footer {
+      flex-direction: column;
+
+      .btn-primary,
+      .btn-secondary {
+        width: 100%;
+        text-align: center;
+      }
+    }
+  }
+</style>
