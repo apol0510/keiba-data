@@ -2,14 +2,31 @@
 interface Props {
   title: string;
   description?: string;
+  ogImage?: string;
+  ogType?: 'website' | 'article';
+  canonicalUrl?: string;
+  publishedTime?: string;
+  modifiedTime?: string;
+  author?: string;
+  keywords?: string;
 }
 
 const {
   title,
-  description = '地方競馬・JRA・南関 全24競馬場のAI指数を公開'
+  description = '地方競馬・JRA・南関 全24競馬場のAI指数を公開',
+  ogImage = 'https://keiba-computer-web.netlify.app/og-default.png',
+  ogType = 'website',
+  canonicalUrl,
+  publishedTime,
+  modifiedTime,
+  author = 'AI指数',
+  keywords = '競馬,AI指数,コンピ指数,予想,地方競馬,JRA,南関東'
 } = Astro.props;
 
 const siteTitle = title === 'AI指数' ? title : `${title} | AI指数`;
+const siteName = 'AI指数';
+const siteUrl = 'https://keiba-computer-web.netlify.app';
+const currentUrl = canonicalUrl || `${siteUrl}${Astro.url.pathname}`;
 ---
 
 <!DOCTYPE html>
@@ -18,8 +35,37 @@ const siteTitle = title === 'AI指数' ? title : `${title} | AI指数`;
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="generator" content={Astro.generator}>
+
+  <!-- Primary Meta Tags -->
   <title>{siteTitle}</title>
+  <meta name="title" content={siteTitle}>
   <meta name="description" content={description}>
+  <meta name="keywords" content={keywords}>
+  <meta name="author" content={author}>
+  <link rel="canonical" href={currentUrl}>
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content={ogType}>
+  <meta property="og:url" content={currentUrl}>
+  <meta property="og:site_name" content={siteName}>
+  <meta property="og:title" content={siteTitle}>
+  <meta property="og:description" content={description}>
+  <meta property="og:image" content={ogImage}>
+  <meta property="og:locale" content="ja_JP">
+  {ogType === 'article' && publishedTime && <meta property="article:published_time" content={publishedTime}>}
+  {ogType === 'article' && modifiedTime && <meta property="article:modified_time" content={modifiedTime}>}
+  {ogType === 'article' && <meta property="article:author" content={author}>}
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content={currentUrl}>
+  <meta name="twitter:title" content={siteTitle}>
+  <meta name="twitter:description" content={description}>
+  <meta name="twitter:image" content={ogImage}>
+
+  <!-- Additional SEO -->
+  <meta name="robots" content="index, follow">
+  <meta name="googlebot" content="index, follow">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

@@ -31,9 +31,53 @@ try {
 }
 
 const title = article ? article.title : `${venue.name}競馬予想ブログ`;
+const description = article ? article.summary : `${venue.name}競馬の予想ブログ`;
+const siteUrl = 'https://keiba-computer-web.netlify.app';
+const currentUrl = `${siteUrl}/blog/${date}/${venueCode}`;
+
+// 構造化データ（JSON-LD）
+const structuredData = article ? {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": article.title,
+  "description": article.summary,
+  "author": {
+    "@type": "Organization",
+    "name": "AI指数"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "AI指数",
+    "logo": {
+      "@type": "ImageObject",
+      "url": `${siteUrl}/logo.png`
+    }
+  },
+  "datePublished": article.publishedAt,
+  "dateModified": article.publishedAt,
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": currentUrl
+  },
+  "articleSection": `${venue.categoryLabel}競馬`,
+  "keywords": `競馬予想,AI指数,${venue.name},${date},コンピ指数`,
+  "inLanguage": "ja"
+} : null;
 ---
 
-<BaseLayout title={title}>
+<BaseLayout
+  title={title}
+  description={description}
+  ogType="article"
+  canonicalUrl={currentUrl}
+  publishedTime={article?.publishedAt}
+  modifiedTime={article?.publishedAt}
+  keywords={`競馬予想,AI指数,${venue.name},${date},コンピ指数,${venue.categoryLabel}`}
+>
+  {structuredData && (
+    <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+  )}
+
   <div class="blog-container">
     {error ? (
       <div class="error">
@@ -82,8 +126,25 @@ const title = article ? article.title : `${venue.name}競馬予想ブログ`;
 
                 const cells = line.split('|').filter(c => c.trim()).map(c => c.trim());
                 const isHeader = line.includes('印') || line.includes('馬番') || line.includes('馬名');
-                const tag = isHeader ? 'th' : 'td';
-                tableRows.push(`<tr>${cells.map(c => `<${tag}>${c}</${tag}>`).join('')}</tr>`);
+
+                if (isHeader) {
+                  tableRows.push(`<tr>${cells.map(c => `<th>${c}</th>`).join('')}</tr>`);
+                } else {
+                  // 印カラムに色を付ける
+                  const cellsWithColor = cells.map((c, idx) => {
+                    if (idx === 0) {
+                      // 印カラム
+                      let className = '';
+                      if (c === '◎') className = 'mark-honmei';
+                      else if (c === '○') className = 'mark-taikou';
+                      else if (c === '▲') className = 'mark-tanana';
+                      else if (c === '△') className = 'mark-renshita';
+                      return `<td class="${className}">${c}</td>`;
+                    }
+                    return `<td>${c}</td>`;
+                  });
+                  tableRows.push(`<tr>${cellsWithColor.join('')}</tr>`);
+                }
               } else {
                 // テーブル終了
                 if (inTable) {
@@ -256,47 +317,95 @@ const title = article ? article.title : `${venue.name}競馬予想ブログ`;
 
     :global(table) {
       width: 100%;
-      border-collapse: collapse;
+      border-collapse: separate;
+      border-spacing: 0;
       margin: 1.5rem 0;
-      background: #2c2c2e;
-      border-radius: 8px;
+      background: #1c1c1e;
+      border: 2px solid #3a3a3c;
+      border-radius: 12px;
       overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 
       th, td {
-        padding: 0.75rem;
+        padding: 0.875rem 1rem;
+        border-right: 1px solid #3a3a3c;
         border-bottom: 1px solid #3a3a3c;
       }
 
       th {
-        background: #3a3a3c;
-        font-weight: 600;
+        background: linear-gradient(135deg, #5e5ce6 0%, #4f4ddb 100%);
+        font-weight: 700;
         color: #fff;
         text-align: center;
+        font-size: 0.95rem;
+        letter-spacing: 0.5px;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+
+        &:last-child {
+          border-right: none;
+        }
       }
 
       td {
         text-align: center;
+        background: #2c2c2e;
+        transition: background 0.2s ease;
+        font-size: 0.95rem;
 
+        // 印カラム
         &:first-child {
           text-align: center;
           width: 50px;
+          font-size: 1.5rem;
+          font-weight: 700;
         }
 
+        // 馬番カラム
         &:nth-child(2) {
           text-align: center;
-          width: 80px;
+          width: 60px;
+          font-weight: 600;
+          color: #cbd5e1;
         }
 
+        // 馬名カラム
         &:nth-child(3) {
           text-align: left;
           padding-left: 1rem;
+          font-weight: 500;
+          color: #e5e5e7;
+          min-width: 140px;
+        }
+
+        // 指数カラム
+        &:nth-child(4) {
+          text-align: center;
+          width: 70px;
+          font-weight: 700;
+          font-size: 1.125rem;
+          color: #00d4ff;
+          font-family: 'Courier New', monospace;
+          text-shadow: 0 0 8px rgba(0, 212, 255, 0.4);
+        }
+
+        // 騎手カラム（5列目がある場合）
+        &:nth-child(5) {
+          text-align: center;
+          font-weight: 500;
+          color: #cbd5e1;
+          min-width: 100px;
+        }
+
+        // 調教師カラム（6列目がある場合）
+        &:nth-child(6) {
+          text-align: center;
+          font-weight: 500;
+          color: #cbd5e1;
+          min-width: 100px;
         }
 
         &:last-child {
-          text-align: center;
-          width: 80px;
-          font-weight: 600;
-          color: #00d4ff;
+          border-right: none;
         }
       }
 
@@ -304,8 +413,70 @@ const title = article ? article.title : `${venue.name}競馬予想ブログ`;
         border-bottom: none;
       }
 
-      tr:hover {
-        background: rgba(94, 92, 230, 0.1);
+      tr:hover td {
+        background: rgba(94, 92, 230, 0.15);
+      }
+
+      // 印のカラーリング
+      :global(.mark-honmei) {
+        color: #ff3b30;
+        text-shadow: 0 0 12px rgba(255, 59, 48, 0.6);
+        background: rgba(255, 59, 48, 0.1) !important;
+      }
+
+      :global(.mark-taikou) {
+        color: #ff9500;
+        text-shadow: 0 0 12px rgba(255, 149, 0, 0.6);
+        background: rgba(255, 149, 0, 0.1) !important;
+      }
+
+      :global(.mark-tanana) {
+        color: #ffd60a;
+        text-shadow: 0 0 12px rgba(255, 214, 10, 0.6);
+        background: rgba(255, 214, 10, 0.1) !important;
+      }
+
+      :global(.mark-renshita) {
+        color: #30d158;
+        text-shadow: 0 0 12px rgba(48, 209, 88, 0.6);
+        background: rgba(48, 209, 88, 0.1) !important;
+      }
+    }
+
+    // モバイル対応
+    @media (max-width: 768px) {
+      :global(table) {
+        font-size: 0.85rem;
+
+        th, td {
+          padding: 0.5rem 0.4rem;
+        }
+
+        td {
+          &:first-child {
+            font-size: 1.25rem;
+            width: 40px;
+          }
+
+          &:nth-child(2) {
+            width: 50px;
+          }
+
+          &:nth-child(3) {
+            min-width: 100px;
+          }
+
+          &:nth-child(4) {
+            width: 60px;
+            font-size: 1rem;
+          }
+
+          &:nth-child(5),
+          &:nth-child(6) {
+            min-width: 80px;
+            font-size: 0.8rem;
+          }
+        }
       }
     }
 
