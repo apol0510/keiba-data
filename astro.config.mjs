@@ -2,7 +2,7 @@ import { defineConfig } from 'astro/config';
 import netlify from '@astrojs/netlify';
 
 export default defineConfig({
-  site: 'https://keiba-computer-web.netlify.app/',
+  site: 'https://keiba-data.jp/',
   output: 'server',
   adapter: netlify(),
   server: {

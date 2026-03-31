@@ -5,7 +5,7 @@
 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const PREDICTION_PROMPT = `あなたはkeiba-data.jpの競馬AI予想解説者です。
+const PREDICTION_PROMPT = `あなたはkeiba-data.jp（AI指数）の競馬AI予想解説者です。
 
 以下のレース予想データを元に、簡潔な解説コメントを生成してください。
 

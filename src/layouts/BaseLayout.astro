@@ -14,7 +14,7 @@ interface Props {
 const {
   title,
   description = '地方競馬・JRA・南関 全24競馬場のAI指数を公開',
-  ogImage = 'https://keiba-computer-web.netlify.app/og-default.png',
+  ogImage = 'https://keiba-data.jp/og-default.png',
   ogType = 'website',
   canonicalUrl,
   publishedTime,
@@ -25,7 +25,7 @@ const {
 
 const siteTitle = title === 'AI指数' ? title : `${title} | AI指数`;
 const siteName = 'AI指数';
-const siteUrl = 'https://keiba-computer-web.netlify.app';
+const siteUrl = 'https://keiba-data.jp';
 const currentUrl = canonicalUrl || `${siteUrl}${Astro.url.pathname}`;
 ---
 

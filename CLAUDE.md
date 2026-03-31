@@ -12,7 +12,7 @@
 ### **このプロジェクトの識別情報**
 
 ```
-プロジェクト名: keiba-computer-web
+プロジェクト名: keiba-data
 作業ディレクトリ: /Users/apolon/Projects/keiba-computer-web
 Gitリポジトリ: https://github.com/apol0510/keiba-computer-web.git
 親ディレクトリ: /Users/apolon/Projects/
@@ -33,11 +33,11 @@ git remote -v  # → apol0510/keiba-computer-web.git
 
 | 項目 | 内容 |
 |------|------|
-| **プロジェクト名** | keiba-computer-web |
+| **プロジェクト名** | keiba-data |
 | **コンセプト** | コンピ指数閲覧サイト（全24競馬場対応） |
 | **作成日** | 2026-02-18 |
 | **GitHubリポジトリ** | https://github.com/apol0510/keiba-computer-web |
-| **本番URL** | https://keiba-computer-web.netlify.app |
+| **本番URL** | https://keiba-data.jp |
 | **公開設定** | Public |
 
 ### **技術スタック**
@@ -61,7 +61,7 @@ raw.githubusercontent.com からJSONをfetch
     ↓
 最新データを表示
 
-∴ データが更新されても keiba-computer-web のデプロイは不要！
+∴ データが更新されても keiba-data のデプロイは不要！
   アクセスするだけで最新データが表示される
 ```
 
@@ -101,7 +101,7 @@ jra/predictions/computer/2026/02/2026-02-19-TOK.json     ← 東京
 ## 🏗️ **ディレクトリ構造** 🏗️
 
 ```
-keiba-computer-web/
+keiba-data/
 ├── CLAUDE.md                        # このファイル
 ├── package.json
 ├── astro.config.mjs                 # output: 'server', netlify adapter
@@ -239,7 +239,7 @@ npm run build
 ```
 
 ### **Netlifyの自動デプロイ**
-- keiba-computer-web リポジトリへの push で自動デプロイ
+- keiba-data リポジトリへの push で自動デプロイ
 - keiba-data-shared への push では**デプロイされない**（これは正常）
 - keiba-data-shared の GitHub Actions は結果・予想ページ（SSG）のためのもの
 
