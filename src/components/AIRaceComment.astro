@@ -1,0 +1,356 @@
+---
+/**
+ * AIレースコメントコンポーネント
+ * コンピ指数 + 出馬表データを元にGemini AIが予想解説を生成
+ */
+interface Props {
+  raceData: string;
+}
+
+const { raceData } = Astro.props;
+---
+
+<div class="ai-comment-section" data-type="prediction" data-race={raceData}>
+  <div class="ai-comment-header">
+    <div class="ai-comment-header-left">
+      <div class="ai-comment-badge">
+        <span class="ai-pulse"></span>
+        <span class="ai-badge-text">AI</span>
+      </div>
+      <div class="ai-comment-title-area">
+        <span class="ai-comment-label">AI予想解説</span>
+        <span class="ai-comment-sub">Powered by Gemini</span>
+      </div>
+    </div>
+    <button class="ai-comment-toggle" aria-label="AI解説を表示">
+      <span class="toggle-text">解説を見る</span>
+      <span class="toggle-arrow">▼</span>
+    </button>
+  </div>
+  <div class="ai-comment-body" style="display: none;">
+    <div class="ai-comment-loading" style="display: none;">
+      <div class="ai-loading-bar">
+        <div class="ai-loading-progress"></div>
+      </div>
+      <span class="ai-loading-text">AIがレースを分析中...</span>
+    </div>
+    <div class="ai-comment-text"></div>
+  </div>
+</div>
+
+<style>
+  .ai-comment-section {
+    margin: 16px 0;
+    border-radius: 12px;
+    border: 2px solid rgba(59, 130, 246, 0.4);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+    overflow: visible;
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    position: relative;
+  }
+
+  .ai-comment-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #8b5cf6, #3b82f6);
+    background-size: 200% 100%;
+    animation: gradientSlide 3s linear infinite;
+    overflow: hidden;
+    border-radius: 12px 12px 0 0;
+  }
+
+  @keyframes gradientSlide {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 200% 0%; }
+  }
+
+  .ai-comment-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  .ai-comment-header:hover {
+    background: rgba(59, 130, 246, 0.05);
+  }
+
+  .ai-comment-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .ai-comment-badge {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4);
+    flex-shrink: 0;
+  }
+
+  .ai-pulse {
+    position: absolute;
+    inset: -3px;
+    border-radius: 14px;
+    border: 2px solid rgba(59, 130, 246, 0.5);
+    animation: aiBadgePulse 2s ease-in-out infinite;
+  }
+
+  @keyframes aiBadgePulse {
+    0%, 100% { opacity: 0; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
+  }
+
+  .ai-badge-text {
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 900;
+    letter-spacing: 1px;
+  }
+
+  .ai-comment-title-area {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .ai-comment-label {
+    font-size: 1.1rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #60a5fa, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .ai-comment-sub {
+    font-size: 0.7rem;
+    color: rgba(139, 92, 246, 0.7);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+
+  .ai-comment-toggle {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15));
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    border-radius: 20px;
+    padding: 8px 18px;
+    color: #60a5fa;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .ai-comment-toggle:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(139, 92, 246, 0.25));
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  }
+
+  .ai-comment-toggle.open {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: white;
+    border-color: transparent;
+  }
+
+  .ai-comment-toggle.open .toggle-arrow {
+    transform: rotate(180deg);
+  }
+
+  .toggle-arrow {
+    font-size: 0.7rem;
+    transition: transform 0.2s ease;
+  }
+
+  .ai-comment-body {
+    padding: 0 20px 20px;
+  }
+
+  .ai-comment-loading {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 0;
+  }
+
+  .ai-loading-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(59, 130, 246, 0.15);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .ai-loading-progress {
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+    border-radius: 4px;
+    animation: loadingProgress 1.5s ease-in-out infinite;
+  }
+
+  @keyframes loadingProgress {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(350%); }
+  }
+
+  .ai-loading-text {
+    font-size: 0.85rem;
+    color: #60a5fa;
+    font-weight: 500;
+  }
+
+  .ai-comment-text {
+    font-size: 0.95rem;
+    line-height: 1.85;
+    color: var(--text-primary, #e5e7eb);
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    border-left: 3px solid;
+    border-image: linear-gradient(180deg, #3b82f6, #8b5cf6) 1;
+  }
+
+  .ai-comment-text p {
+    margin-bottom: 8px;
+  }
+
+  .ai-comment-text p:last-child {
+    margin-bottom: 0;
+  }
+
+  .ai-comment-text.error {
+    color: #9ca3af;
+    font-style: italic;
+    border-image: none;
+    border-left-color: rgba(239, 68, 68, 0.5);
+  }
+
+  @media (max-width: 768px) {
+    .ai-comment-header {
+      padding: 12px 14px;
+    }
+
+    .ai-comment-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+    }
+
+    .ai-badge-text {
+      font-size: 0.75rem;
+    }
+
+    .ai-comment-label {
+      font-size: 0.95rem;
+    }
+
+    .ai-comment-toggle {
+      padding: 6px 12px;
+      font-size: 0.75rem;
+    }
+
+    .ai-comment-body {
+      padding: 0 14px 14px;
+    }
+
+    .ai-comment-text {
+      font-size: 0.9rem;
+      padding: 12px;
+    }
+  }
+</style>
+
+<script is:inline>
+  if (!window._aiCommentInitialized) {
+    window._aiCommentInitialized = true;
+    window._aiCommentCache = {};
+    window._aiCommentLoaded = new Set();
+
+    document.addEventListener('click', async (e) => {
+      const header = e.target.closest('.ai-comment-header');
+      if (!header) return;
+
+      const section = header.closest('.ai-comment-section');
+      if (!section) return;
+
+      const body = section.querySelector('.ai-comment-body');
+      const toggle = section.querySelector('.ai-comment-toggle');
+      const toggleText = toggle.querySelector('.toggle-text');
+      const loading = section.querySelector('.ai-comment-loading');
+      const textEl = section.querySelector('.ai-comment-text');
+      const type = section.dataset.type;
+
+      let raceData;
+      try { raceData = JSON.parse(section.dataset.race); } catch(ex) { return; }
+
+      const cacheKey = `${type}-${raceData.date}-${raceData.venue}-${raceData.raceNumber}`;
+      const isOpen = body.style.display !== 'block';
+
+      body.style.display = isOpen ? 'block' : 'none';
+      toggle.classList.toggle('open', isOpen);
+      toggleText.textContent = isOpen ? '閉じる' : '解説を見る';
+
+      if (isOpen && !window._aiCommentLoaded.has(cacheKey)) {
+        if (window._aiCommentCache[cacheKey]) {
+          renderAIComment(textEl, window._aiCommentCache[cacheKey]);
+          window._aiCommentLoaded.add(cacheKey);
+          return;
+        }
+
+        loading.style.display = 'flex';
+        textEl.textContent = '';
+
+        try {
+          const res = await fetch('/.netlify/functions/gemini-race-analysis', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type, raceData })
+          });
+          const data = await res.json();
+          loading.style.display = 'none';
+
+          if (data.success && data.comment) {
+            window._aiCommentCache[cacheKey] = data.comment;
+            renderAIComment(textEl, data.comment);
+          } else {
+            textEl.textContent = 'AI解説を取得できませんでした。';
+            textEl.classList.add('error');
+          }
+        } catch (err) {
+          loading.style.display = 'none';
+          textEl.textContent = 'AI解説を取得できませんでした。';
+          textEl.classList.add('error');
+        }
+        window._aiCommentLoaded.add(cacheKey);
+      }
+    });
+
+    function renderAIComment(el, comment) {
+      el.innerHTML = '';
+      const lines = comment.split('\n').filter(l => l.trim());
+      lines.forEach(line => {
+        const p = document.createElement('p');
+        p.textContent = line;
+        el.appendChild(p);
+      });
+    }
+  }
+</script>

@@ -21,7 +21,7 @@ export const VENUES: VenueInfo[] = [
   { code: 'SAP', name: '札幌',  category: 'jra',    categoryLabel: 'JRA' },
   { code: 'HKD', name: '函館',  category: 'jra',    categoryLabel: 'JRA' },
   // 南関（4場）
-  { code: 'OOI', name: '大井',  category: 'nankan', categoryLabel: '南関' },
+  { code: 'OOI', name: '大井',  category: 'nankan', categoryLabel: '南関' }, // 注: OIではなくOOI
   { code: 'FUN', name: '船橋',  category: 'nankan', categoryLabel: '南関' },
   { code: 'KAW', name: '川崎',  category: 'nankan', categoryLabel: '南関' },
   { code: 'URA', name: '浦和',  category: 'nankan', categoryLabel: '南関' },
@@ -84,6 +84,87 @@ export interface VenueResult {
   venue: VenueInfo;
   data: ComputerData | null;
   error?: string;
+}
+
+// ── 出馬表データ型定義 ──
+
+export interface RecentRace {
+  order: number;
+  finish: number | null;
+  finishStatus: string | null;
+  date: string;
+  trackCondition: string;
+  headCount: number;
+  venue: string;
+  direction: string;
+  distance: number;
+  postPosition: number;
+  raceName: string;
+  popularity: number;
+  bodyWeight: string;
+  jockey: string;
+  weight: number;
+  time: string;
+  passingOrder: string;
+  last3f: string;
+  margin: string;
+  opponentName: string;
+}
+
+export interface EntryHorse {
+  postPosition: number;
+  number: number;
+  name: string;
+  gender: string;
+  age: number;
+  coat: string;
+  weight: number | null;
+  jockey: string;
+  jockeyAffiliation: string;
+  trainer: string;
+  trainerAffiliation: string;
+  owner: string;
+  breeder: string;
+  sire: string;
+  bms: string;
+  bestTime: string;
+  record: {
+    total: { wins: number; seconds: number; thirds: number; unplaced: number };
+    left: { wins: number; seconds: number; thirds: number; unplaced: number };
+    right: { wins: number; seconds: number; thirds: number; unplaced: number };
+    venue: { wins: number; seconds: number; thirds: number; unplaced: number };
+    distance: { wins: number; seconds: number; thirds: number; unplaced: number };
+  };
+  recentRaces: RecentRace[];
+}
+
+export interface EntryRace {
+  raceNumber: number;
+  raceName: string;
+  startTime: string;
+  distance: string;
+  surface: string;
+  direction: string;
+  conditions: string;
+  headCount: number;
+  horses: EntryHorse[];
+}
+
+export interface EntriesData {
+  version: string;
+  createdAt: string;
+  lastUpdated: string;
+  date: string;
+  venue: string;
+  venueCode: string;
+  category: string;
+  totalRaces: number;
+  races: EntryRace[];
+}
+
+export function getEntriesDataUrl(date: string, venue: VenueInfo): string {
+  const [year, month] = date.split('-');
+  return `${GITHUB_RAW_BASE}/${venue.category}/entries/${year}/${month}/${date}-${venue.code}.json`;
 }
 
 // 指定日の全競馬場データを並列取得

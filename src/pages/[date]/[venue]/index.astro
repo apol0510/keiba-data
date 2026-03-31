@@ -1,6 +1,16 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
-import { VENUES, getComputerDataUrl, type ComputerData, type ComputerHorse } from '../../../lib/venues';
+import AIRaceComment from '../../../components/AIRaceComment.astro';
+import {
+  VENUES,
+  getComputerDataUrl,
+  getEntriesDataUrl,
+  type ComputerData,
+  type ComputerHorse,
+  type EntriesData,
+  type EntryHorse,
+  type RecentRace,
+} from '../../../lib/venues';
 
 const { date, venue: venueCode } = Astro.params;
 
@@ -8,17 +18,48 @@ if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !venueCode) {
   return Astro.redirect('/');
 }
 
+// OI → OOI へのリダイレクト（後方互換性）
+if (venueCode.toUpperCase() === 'OI') {
+  return Astro.redirect(`/${date}/OOI`);
+}
+
 const venueInfo = VENUES.find(v => v.code === venueCode.toUpperCase());
 if (!venueInfo) {
   return Astro.redirect('/');
 }
 
+// コンピ指数データ取得
 let data: ComputerData | null = null;
+let fetchUrl = '';
 try {
-  const url = getComputerDataUrl(date, venueInfo);
-  const res = await fetch(url);
-  if (res.ok) data = await res.json();
+  fetchUrl = getComputerDataUrl(date, venueInfo);
+  const res = await fetch(fetchUrl);
+  if (res.ok) {
+    data = await res.json();
+  }
 } catch (_) {}
+
+// 出馬表データ取得
+let entriesData: EntriesData | null = null;
+try {
+  const entriesUrl = getEntriesDataUrl(date, venueInfo);
+  const res = await fetch(entriesUrl);
+  if (res.ok) {
+    entriesData = await res.json();
+  }
+} catch (_) {}
+
+// 出馬表の馬名 → recentRaces マップ（AI解説用）
+const horseRecentMap = new Map<string, RecentRace[]>();
+if (entriesData) {
+  for (const race of entriesData.races) {
+    for (const horse of race.horses) {
+      if (horse.recentRaces && horse.recentRaces.length > 0) {
+        horseRecentMap.set(horse.name, horse.recentRaces);
+      }
+    }
+  }
+}
 
 const prev = new Date(date); prev.setDate(prev.getDate() - 1);
 const next = new Date(date); next.setDate(next.getDate() + 1);
@@ -31,38 +72,35 @@ function formatDateJa(d: string): string {
 }
 
 // 印を付与（指数順で◎○▲△）
-function getMark(rank: number): { mark: string; key: string } {
-  if (rank === 0) return { mark: '◎', key: 'honmei' };
-  if (rank === 1) return { mark: '○', key: 'taikou' };
-  if (rank === 2) return { mark: '▲', key: 'tanana' };
-  if (rank <= 9)  return { mark: '△', key: 'renshita' };
-  return { mark: '', key: 'none' };
+function getMark(rank: number): { mark: string; key: string; role: string } {
+  if (rank === 0) return { mark: '◎', key: 'honmei', role: '本命' };
+  if (rank === 1) return { mark: '○', key: 'taikou', role: '対抗' };
+  if (rank === 2) return { mark: '▲', key: 'tanana', role: '単穴' };
+  if (rank <= 9)  return { mark: '△', key: 'renshita', role: '連下' };
+  return { mark: '', key: 'none', role: '' };
 }
 
 // 各レースに印と調整済み指数を付与
 interface HorseWithMark extends ComputerHorse {
   mark: string;
   markKey: string;
-  displayIndex: number; // -10した表示用
+  displayIndex: number;
+  role: string;
 }
 
 const races = data?.races.map(race => {
   const sorted = [...race.horses].sort((a, b) => b.computerIndex - a.computerIndex);
-  // 34以下（displayIndex = computerIndex - 10 <= 34）を除外してrankを付与
   let markRank = 0;
   const horses: HorseWithMark[] = sorted.map((h) => {
     const tempDisplayIndex = h.computerIndex - 10;
     if (tempDisplayIndex <= 34) {
-      // 無印: -11
-      return { ...h, mark: '', markKey: 'none', displayIndex: h.computerIndex - 11 };
+      return { ...h, mark: '', markKey: 'none', displayIndex: h.computerIndex - 11, role: '' };
     }
-    const { mark, key } = getMark(markRank);
+    const { mark, key, role } = getMark(markRank);
     markRank++;
-    // 本命(rank=0)は-10、それ以外は-11
     const displayIndex = markRank === 1 ? h.computerIndex - 10 : h.computerIndex - 11;
-    return { ...h, mark, markKey: key, displayIndex };
+    return { ...h, mark, markKey: key, displayIndex, role };
   });
-  // 馬番順に並べ直して返す（表示は馬番順）
   const byNumber = [...horses].sort((a, b) => a.number - b.number);
   return { ...race, horses: byNumber };
 }) ?? [];
@@ -71,6 +109,41 @@ const hasJockey  = races[0]?.horses[0]?.jockey   != null;
 const hasTrainer = races[0]?.horses[0]?.trainer  != null;
 const hasWeight  = races[0]?.horses[0]?.weight    != null;
 const hasAgeGend = races[0]?.horses[0]?.ageGender != null;
+
+// AI解説用データ生成（各レースごと）
+function buildAIRaceData(race: typeof races[0], raceIndex: number) {
+  const sorted = [...race.horses].sort((a, b) => b.displayIndex - a.displayIndex);
+  const topHorses = sorted.filter(h => h.markKey !== 'none').slice(0, 6).map(h => {
+    const recentRaces = horseRecentMap.get(h.name) || [];
+    return {
+      role: h.role,
+      horseNumber: h.number,
+      horseName: h.name,
+      computerIndex: h.displayIndex,
+      jockey: h.jockey || '',
+      recentRaces: recentRaces.slice(0, 3).map(r => ({
+        date: r.date,
+        venue: r.venue,
+        distance: r.distance,
+        finish: r.finish,
+        finishStatus: r.finishStatus,
+        headCount: r.headCount,
+        passingOrder: r.passingOrder,
+        last3f: r.last3f,
+      })),
+    };
+  });
+
+  return JSON.stringify({
+    venue: venueInfo.name,
+    date,
+    raceNumber: race.raceNumber,
+    raceName: race.raceName || '',
+    distance: race.distance,
+    horseCount: race.horses.length,
+    topHorses,
+  });
+}
 
 const title = `${venueInfo.name} ${formatDateJa(date)} AI指数`;
 ---
@@ -107,117 +180,263 @@ const title = `${venueInfo.name} ${formatDateJa(date)} AI指数`;
     </div>
   </header>
 
-  <!-- 凡例 + ソートトグル -->
-  <div class="legend">
-    <span class="leg-item honmei">◎ 本命</span>
-    <span class="leg-item taikou">○ 対抗</span>
-    <span class="leg-item tanana">▲ 単穴</span>
-    <span class="leg-item renshita">△ 連下</span>
-    <div class="sort-toggle" id="sortToggle">
-      <button class="sort-btn active" data-sort="number">馬番順</button>
-      <button class="sort-btn" data-sort="index">指数順</button>
-    </div>
+  <!-- メインタブ（指数 / 出馬表） -->
+  <div class="main-tab-bar" id="mainTabBar">
+    <button class="main-tab-btn active" data-main-tab="index">コンピ指数</button>
+    {entriesData && <button class="main-tab-btn" data-main-tab="entries">出馬表</button>}
   </div>
 
-  <!-- 有料誘導バナー（JRA・南関のみ） -->
-  {venueInfo.category !== 'local' && (
-    <a href="https://keiba-intelligence.netlify.app" target="_blank" rel="noopener" class="inline-cta">
-      <div class="inline-cta-left">
-        <span class="inline-cta-label">有料版</span>
-        <span class="inline-cta-text">
-          {venueInfo.category === 'jra'
-            ? <><strong>中央競馬</strong>の買い目・予想はkeiba-intelligenceで公開中</>
-            : <><strong>南関競馬</strong>の買い目・予想はkeiba-intelligenceで公開中</>
-          }
-        </span>
+  <!-- ═══ コンピ指数パネル ═══ -->
+  <div class="main-tab-panel active" id="mainPanel-index">
+    <!-- 凡例 + ソートトグル -->
+    <div class="legend">
+      <span class="leg-item honmei">◎ 本命</span>
+      <span class="leg-item taikou">○ 対抗</span>
+      <span class="leg-item tanana">▲ 単穴</span>
+      <span class="leg-item renshita">△ 連下</span>
+      <div class="sort-toggle" id="sortToggle">
+        <button class="sort-btn active" data-sort="number">馬番順</button>
+        <button class="sort-btn" data-sort="index">指数順</button>
       </div>
-      <span class="inline-cta-arrow">詳細を見る →</span>
-    </a>
-  )}
-
-  {!data ? (
-    <div class="empty-state">
-      <div class="empty-icon">📭</div>
-      <p>この日の{venueInfo.name}のデータはありません</p>
     </div>
-  ) : (
-    <div class="tab-container" id="tabContainer">
-      <!-- タブバー -->
-      <div class="tab-bar" role="tablist" id="tabBar">
-        {races.map((race, i) => (
-          <button
-            class={`tab-btn ${i === 0 ? 'active' : ''}`}
-            role="tab"
-            aria-selected={i === 0 ? 'true' : 'false'}
-            data-tab={i}
-            aria-controls={`panel-${i}`}
-          >
-            {race.raceNumber}R
-          </button>
-        ))}
-      </div>
 
-      <!-- タブパネル -->
-      {races.map((race, i) => {
-        return (
+    <!-- 有料誘導バナー（JRA・南関のみ） -->
+    {venueInfo.category !== 'local' && (
+      <a href="https://keiba-intelligence.jp/pricing" target="_blank" rel="noopener" class="inline-cta">
+        <div class="inline-cta-left">
+          <span class="inline-cta-label">PRO</span>
+          <span class="inline-cta-text">
+            <strong>全買い目・PRO分析</strong>はkeiba-intelligence.jpで公開中
+          </span>
+        </div>
+        <span class="inline-cta-arrow">詳細を見る →</span>
+      </a>
+    )}
+
+    {!data ? (
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <p>この日の{venueInfo.name}のデータはありません</p>
+      </div>
+    ) : (
+      <div class="tab-container" id="tabContainer">
+        <!-- レースタブバー -->
+        <div class="tab-bar" role="tablist" id="tabBar">
+          {races.map((race, i) => (
+            <button
+              class={`tab-btn ${i === 0 ? 'active' : ''}`}
+              role="tab"
+              aria-selected={i === 0 ? 'true' : 'false'}
+              data-tab={i}
+              aria-controls={`panel-${i}`}
+            >
+              {race.raceNumber}R
+            </button>
+          ))}
+        </div>
+
+        <!-- レースタブパネル -->
+        {races.map((race, i) => {
+          const aiData = buildAIRaceData(race, i);
+          return (
+            <div
+              class={`tab-panel ${i === 0 ? 'active' : ''}`}
+              role="tabpanel"
+              id={`panel-${i}`}
+              data-panel={i}
+            >
+              <!-- レース情報 -->
+              <div class="race-info-bar">
+                <span class="race-num-badge">{race.raceNumber}R</span>
+                <span class="race-name-text">{race.raceName || '　'}</span>
+                {race.distance && <span class="race-chip">{race.surface}{race.distance}m</span>}
+                {race.startTime && <span class="race-chip">{race.startTime}発走</span>}
+              </div>
+
+              <!-- AI予想解説 -->
+              {entriesData && (
+                <AIRaceComment raceData={aiData} />
+              )}
+
+              <!-- 全頭テーブル -->
+              <div class="horse-table-wrap">
+                <table class="horse-table">
+                  <thead>
+                    <tr>
+                      <th class="th-mark">印</th>
+                      <th class="th-num">馬番</th>
+                      <th class="th-name">馬名</th>
+                      <th class="th-idx">指数</th>
+                      {hasJockey  && <th class="th-small">騎手</th>}
+                      {hasTrainer && <th class="th-small">調教師</th>}
+                      {hasWeight  && <th class="th-small">斤量</th>}
+                      {hasAgeGend && <th class="th-small">馬齢</th>}
+                    </tr>
+                  </thead>
+                  <tbody class="horse-tbody">
+                    {race.horses.map(horse => (
+                      <tr
+                        class={`row-${horse.markKey}`}
+                        data-number={horse.number}
+                        data-index={horse.computerIndex}
+                      >
+                        <td class="td-mark">
+                          {horse.mark && (
+                            <span class={`mark-pill ${horse.markKey}`}>{horse.mark}</span>
+                          )}
+                        </td>
+                        <td class="td-num">{horse.number}</td>
+                        <td class="td-name">{horse.name}</td>
+                        <td class="td-idx">
+                          <span class={`idx-val ${horse.markKey}`}>{horse.displayIndex}</span>
+                        </td>
+                        {hasJockey  && <td class="td-small">{horse.jockey  ?? '—'}</td>}
+                        {hasTrainer && <td class="td-small">{horse.trainer ?? '—'}</td>}
+                        {hasWeight  && <td class="td-small">{horse.weight  ?? '—'}</td>}
+                        {hasAgeGend && <td class="td-small">{horse.ageGender ?? '—'}</td>}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- keiba-intelligence CTA（JRA・南関のみ） -->
+              {venueInfo.category !== 'local' && (
+                <a href="https://keiba-intelligence.jp/pricing" target="_blank" rel="noopener" class="race-cta">
+                  <span class="race-cta-badge">PRO</span>
+                  <span class="race-cta-text">全買い目・PRO分析はこちら</span>
+                  <span class="race-cta-arrow">→</span>
+                </a>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    )}
+  </div>
+
+  <!-- ═══ 出馬表パネル ═══ -->
+  {entriesData && (
+    <div class="main-tab-panel" id="mainPanel-entries">
+      <div class="tab-container">
+        <!-- レースタブバー -->
+        <div class="tab-bar" role="tablist" id="entriesTabBar">
+          {entriesData.races.map((race, i) => (
+            <button
+              class={`tab-btn ${i === 0 ? 'active' : ''}`}
+              role="tab"
+              data-entries-tab={i}
+            >
+              {race.raceNumber}R
+            </button>
+          ))}
+        </div>
+
+        <!-- レースタブパネル -->
+        {entriesData.races.map((race, i) => (
           <div
             class={`tab-panel ${i === 0 ? 'active' : ''}`}
-            role="tabpanel"
-            id={`panel-${i}`}
-            data-panel={i}
+            data-entries-panel={i}
           >
             <!-- レース情報 -->
             <div class="race-info-bar">
               <span class="race-num-badge">{race.raceNumber}R</span>
               <span class="race-name-text">{race.raceName || '　'}</span>
-              {race.distance && <span class="race-chip">{race.surface}{race.distance}m</span>}
+              <span class="race-chip">{race.surface}{race.distance}m</span>
               {race.startTime && <span class="race-chip">{race.startTime}発走</span>}
+              <span class="race-chip">{race.headCount}頭</span>
             </div>
 
-            <!-- 全頭テーブル -->
+            <!-- 出馬表テーブル -->
             <div class="horse-table-wrap">
-              <table class="horse-table">
+              <table class="horse-table entries-table">
                 <thead>
                   <tr>
-                    <th class="th-mark">印</th>
                     <th class="th-num">馬番</th>
                     <th class="th-name">馬名</th>
-                    <th class="th-idx">指数</th>
-                    {hasJockey  && <th class="th-small">騎手</th>}
-                    {hasTrainer && <th class="th-small">調教師</th>}
-                    {hasWeight  && <th class="th-small">斤量</th>}
-                    {hasAgeGend && <th class="th-small">馬齢</th>}
+                    <th class="th-small">性齢</th>
+                    <th class="th-small">斤量</th>
+                    <th class="th-small">騎手</th>
+                    <th class="th-small">調教師</th>
+                    <th class="th-small">戦績</th>
                   </tr>
                 </thead>
-                <tbody class="horse-tbody">
-                  {race.horses.map(horse => (
-                    <tr
-                      class={`row-${horse.markKey}`}
-                      data-number={horse.number}
-                      data-index={horse.computerIndex}
-                    >
-                      <td class="td-mark">
-                        {horse.mark && (
-                          <span class={`mark-pill ${horse.markKey}`}>{horse.mark}</span>
-                        )}
-                      </td>
-                      <td class="td-num">{horse.number}</td>
-                      <td class="td-name">{horse.name}</td>
-                      <td class="td-idx">
-                        <span class={`idx-val ${horse.markKey}`}>{horse.displayIndex}</span>
-                      </td>
-                      {hasJockey  && <td class="td-small">{horse.jockey  ?? '—'}</td>}
-                      {hasTrainer && <td class="td-small">{horse.trainer ?? '—'}</td>}
-                      {hasWeight  && <td class="td-small">{horse.weight  ?? '—'}</td>}
-                      {hasAgeGend && <td class="td-small">{horse.ageGender ?? '—'}</td>}
-                    </tr>
-                  ))}
+                <tbody>
+                  {race.horses.map(horse => {
+                    const rec = horse.record.total;
+                    const totalRuns = rec.wins + rec.seconds + rec.thirds + rec.unplaced;
+                    return (
+                      <tr class="entries-row" data-horse-name={horse.name}>
+                        <td class="td-num">{horse.number}</td>
+                        <td class="td-name">
+                          <span class="horse-name-main">{horse.name}</span>
+                          <span class="horse-pedigree">{horse.sire} × {horse.bms}</span>
+                        </td>
+                        <td class="td-small">{horse.gender}{horse.age}</td>
+                        <td class="td-small">{horse.weight ?? '—'}</td>
+                        <td class="td-small">{horse.jockey}</td>
+                        <td class="td-small">{horse.trainer}</td>
+                        <td class="td-small">{totalRuns}戦{rec.wins}勝</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
+
+            <!-- 直近走 展開ブロック -->
+            {race.horses.map(horse => (
+              horse.recentRaces && horse.recentRaces.length > 0 && (
+                <details class="recent-races-block">
+                  <summary class="recent-summary">
+                    <span class="recent-horse-num">{horse.number}</span>
+                    <span class="recent-horse-name">{horse.name}</span>
+                    <span class="recent-label">直近{Math.min(horse.recentRaces.length, 5)}走</span>
+                  </summary>
+                  <div class="recent-table-wrap">
+                    <table class="recent-table">
+                      <thead>
+                        <tr>
+                          <th>着順</th>
+                          <th>日付</th>
+                          <th>会場</th>
+                          <th>距離</th>
+                          <th>馬場</th>
+                          <th>人気</th>
+                          <th>通過順</th>
+                          <th>上3F</th>
+                          <th>タイム</th>
+                          <th>騎手</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {horse.recentRaces.slice(0, 5).map(r => {
+                          const rankText = r.finishStatus ? r.finishStatus : `${r.finish}`;
+                          const rankClass = r.finish === 1 ? 'rank-1' : r.finish === 2 ? 'rank-2' : r.finish === 3 ? 'rank-3' : '';
+                          return (
+                            <tr>
+                              <td class={`td-rank ${rankClass}`}>{rankText}</td>
+                              <td class="td-date">{r.date.slice(5)}</td>
+                              <td>{r.venue}</td>
+                              <td>{r.distance}m</td>
+                              <td>{r.trackCondition}</td>
+                              <td>{r.popularity}人</td>
+                              <td class="td-passing">{r.passingOrder || '—'}</td>
+                              <td>{r.last3f || '—'}</td>
+                              <td>{r.time || '—'}</td>
+                              <td>{r.jockey}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              )
+            ))}
           </div>
-        );
-      })}
+        ))}
+      </div>
     </div>
   )}
 </BaseLayout>
@@ -313,6 +532,40 @@ const title = `${venueInfo.name} ${formatDateJa(date)} AI指数`;
   padding: 0.4rem 0.75rem;
 }
 
+/* ── メインタブ（指数 / 出馬表） ── */
+.main-tab-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.main-tab-btn {
+  padding: 0.6rem 1.5rem;
+  background: rgba(255,255,255,0.05);
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  color: #9ca3af;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover { background: rgba(255,255,255,0.1); color: #e5e7eb; }
+
+  &.active {
+    background: linear-gradient(135deg, #7c3aed, #5b21b6);
+    border-color: #7c3aed;
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(124,58,237,0.4);
+  }
+}
+
+.main-tab-panel {
+  display: none;
+  &.active { display: block; }
+}
+
 /* ── 凡例 ── */
 .legend {
   display: flex;
@@ -363,7 +616,7 @@ const title = `${venueInfo.name} ${formatDateJa(date)} AI指数`;
   }
 }
 
-/* ── タブバー ── */
+/* ── レースタブバー ── */
 .tab-container { margin-top: 0; }
 
 .tab-bar {
@@ -438,7 +691,7 @@ const title = `${venueInfo.name} ${formatDateJa(date)} AI指数`;
   color: #9ca3af;
 }
 
-/* ── テーブル ── */
+/* ── テーブル共通 ── */
 .horse-table-wrap {
   border-radius: 12px;
   overflow: hidden;
@@ -517,6 +770,201 @@ const title = `${venueInfo.name} ${formatDateJa(date)} AI指数`;
   &.none   { color: #6b7280; }
 }
 
+/* ── 出馬表固有 ── */
+.entries-table {
+  .td-name {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .horse-name-main {
+    font-weight: 700;
+    color: #f3f4f6;
+  }
+
+  .horse-pedigree {
+    font-size: 0.72rem;
+    color: #6b7280;
+    font-weight: 400;
+  }
+}
+
+/* ── 直近走ブロック ── */
+.recent-races-block {
+  margin: 0.5rem 0;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.recent-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  background: rgba(255,255,255,0.03);
+  transition: background 0.15s;
+  font-size: 0.85rem;
+
+  &:hover { background: rgba(255,255,255,0.06); }
+}
+
+.recent-horse-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 4px;
+  background: rgba(124,58,237,0.2);
+  color: #c4b5fd;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.recent-horse-name {
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.recent-label {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.recent-table-wrap {
+  overflow-x: auto;
+  padding: 0.5rem;
+}
+
+.recent-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+
+  th {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #6b7280;
+    text-align: left;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 0.3rem 0.5rem;
+    color: #9ca3af;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    white-space: nowrap;
+  }
+}
+
+.td-rank {
+  font-weight: 700;
+  &.rank-1 { color: #fbbf24; }
+  &.rank-2 { color: #60a5fa; }
+  &.rank-3 { color: #34d399; }
+}
+
+.td-date { color: #6b7280; }
+.td-passing { font-family: monospace; font-size: 0.75rem; }
+
+/* ── CTA ── */
+.inline-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 1.2rem;
+  margin-bottom: 1rem;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(236,72,153,0.12) 0%, rgba(139,92,246,0.12) 100%);
+  border: 1px solid rgba(236,72,153,0.3);
+  text-decoration: none;
+  transition: all 0.2s;
+
+  &:hover {
+    background: linear-gradient(135deg, rgba(236,72,153,0.2) 0%, rgba(139,92,246,0.2) 100%);
+    border-color: rgba(236,72,153,0.5);
+    text-decoration: none;
+  }
+}
+
+.inline-cta-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.inline-cta-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.inline-cta-text {
+  font-size: 0.85rem;
+  color: #e5e7eb;
+}
+
+.inline-cta-arrow {
+  font-size: 0.82rem;
+  color: #ec4899;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.race-cta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 1rem;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(236,72,153,0.1) 0%, rgba(139,92,246,0.1) 100%);
+  border: 1px solid rgba(236,72,153,0.25);
+  text-decoration: none;
+  transition: all 0.2s;
+
+  &:hover {
+    background: linear-gradient(135deg, rgba(236,72,153,0.18) 0%, rgba(139,92,246,0.18) 100%);
+    text-decoration: none;
+  }
+}
+
+.race-cta-badge {
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.race-cta-text {
+  font-size: 0.82rem;
+  color: #e5e7eb;
+  font-weight: 500;
+}
+
+.race-cta-arrow {
+  margin-left: auto;
+  color: #ec4899;
+  font-weight: 700;
+}
+
 /* ── 空状態 ── */
 .empty-state {
   text-align: center;
@@ -531,16 +979,49 @@ const title = `${venueInfo.name} ${formatDateJa(date)} AI指数`;
   .venue-hero-nav { width: 100%; justify-content: flex-end; }
   .horse-table { font-size: 0.82rem; }
   .horse-table th, .horse-table td { padding: 0.4rem 0.5rem; }
-  .mc-name { font-size: 0.9rem; }
   .leg-note { display: none; }
+
+  .main-tab-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .recent-table {
+    font-size: 0.72rem;
+    th, td { padding: 0.25rem 0.35rem; }
+  }
+
+  .inline-cta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .race-cta {
+    flex-wrap: wrap;
+  }
 }
 </style>
 
 <script>
-// タブ切り替え
+// メインタブ切り替え（指数 / 出馬表）
+document.getElementById('mainTabBar')?.addEventListener('click', (e) => {
+  const btn = (e.target as HTMLElement).closest('.main-tab-btn') as HTMLElement | null;
+  if (!btn) return;
+  const tab = btn.dataset.mainTab;
+  if (!tab) return;
+
+  document.querySelectorAll('.main-tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  document.querySelectorAll('.main-tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`mainPanel-${tab}`)?.classList.add('active');
+});
+
+// コンピ指数レースタブ切り替え
 const tabBar = document.getElementById('tabBar');
-const panels = document.querySelectorAll<HTMLElement>('.tab-panel');
-const tabs   = document.querySelectorAll<HTMLElement>('.tab-btn');
+const panels = document.querySelectorAll<HTMLElement>('#mainPanel-index .tab-panel');
+const tabs   = document.querySelectorAll<HTMLElement>('#tabBar .tab-btn');
 
 tabBar?.addEventListener('click', (e) => {
   const btn = (e.target as HTMLElement).closest('.tab-btn') as HTMLElement | null;
@@ -556,21 +1037,34 @@ tabBar?.addEventListener('click', (e) => {
   });
 });
 
+// 出馬表レースタブ切り替え
+document.getElementById('entriesTabBar')?.addEventListener('click', (e) => {
+  const btn = (e.target as HTMLElement).closest('.tab-btn') as HTMLElement | null;
+  if (!btn) return;
+  const idx = Number(btn.dataset.entriesTab);
+  if (isNaN(idx)) return;
+
+  document.querySelectorAll('#entriesTabBar .tab-btn').forEach((t, i) => {
+    t.classList.toggle('active', i === idx);
+  });
+  document.querySelectorAll('[data-entries-panel]').forEach((p, i) => {
+    (p as HTMLElement).classList.toggle('active', i === idx);
+  });
+});
+
 // ソート切り替え（全テーブル一括）
 let currentSort: 'number' | 'index' = 'number';
 
 function sortAllTables(sort: 'number' | 'index') {
-  // テーブルをソート
   document.querySelectorAll<HTMLElement>('.horse-tbody').forEach(tbody => {
     const rows = Array.from(tbody.querySelectorAll<HTMLElement>('tr'));
     rows.sort((a, b) => {
       const aVal = Number(sort === 'number' ? a.dataset.number : a.dataset.index);
       const bVal = Number(sort === 'number' ? b.dataset.number : b.dataset.index);
-      return sort === 'number' ? aVal - bVal : bVal - aVal; // 指数は降順
+      return sort === 'number' ? aVal - bVal : bVal - aVal;
     });
     rows.forEach(r => tbody.appendChild(r));
   });
-
 }
 
 document.getElementById('sortToggle')?.addEventListener('click', (e) => {

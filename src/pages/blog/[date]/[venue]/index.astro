@@ -9,6 +9,11 @@ export async function getStaticPaths() {
 
 const { date, venue: venueCode } = Astro.params;
 
+// OI → OOI へのリダイレクト（後方互換性）
+if (venueCode?.toUpperCase() === 'OI') {
+  return Astro.redirect(`/blog/${date}/OOI`);
+}
+
 // 競馬場情報取得
 const venue = VENUES.find(v => v.code === venueCode);
 
