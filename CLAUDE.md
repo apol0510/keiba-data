@@ -13,16 +13,16 @@
 
 ```
 プロジェクト名: keiba-data
-作業ディレクトリ: /Users/apolon/Projects/keiba-computer-web
-Gitリポジトリ: https://github.com/apol0510/keiba-computer-web.git
+作業ディレクトリ: /Users/apolon/Projects/keiba-data
+Gitリポジトリ: https://github.com/apol0510/keiba-data.git
 親ディレクトリ: /Users/apolon/Projects/
 ```
 
 ### **セッション開始時の必須確認**
 
 ```bash
-pwd        # → /Users/apolon/Projects/keiba-computer-web
-git remote -v  # → apol0510/keiba-computer-web.git
+pwd        # → /Users/apolon/Projects/keiba-data
+git remote -v  # → apol0510/keiba-data.git
 ```
 
 ---
@@ -36,7 +36,7 @@ git remote -v  # → apol0510/keiba-computer-web.git
 | **プロジェクト名** | keiba-data |
 | **コンセプト** | コンピ指数閲覧サイト（全24競馬場対応） |
 | **作成日** | 2026-02-18 |
-| **GitHubリポジトリ** | https://github.com/apol0510/keiba-computer-web |
+| **GitHubリポジトリ** | https://github.com/apol0510/keiba-data |
 | **本番URL** | https://keiba-data.jp |
 | **公開設定** | Public |
 
@@ -215,7 +215,7 @@ function getMark(rank: number): { mark: string; key: string } {
 
 ```bash
 # 作業ディレクトリ
-cd /Users/apolon/Projects/keiba-computer-web
+cd /Users/apolon/Projects/keiba-data
 
 # 依存関係インストール
 npm install
