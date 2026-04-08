@@ -206,7 +206,7 @@ const title = `${venueInfo.name} ${formatDateJa(date)} AI指数`;
   <!-- メインタブ（指数 / 印・近走 / 出馬表） -->
   <div class="main-tab-bar" id="mainTabBar">
     <button class="main-tab-btn active" data-main-tab="index">コンピ指数</button>
-    {racebookData && <button class="main-tab-btn" data-main-tab="racebook">印・近走</button>}
+    {racebookData && <button class="main-tab-btn" data-main-tab="racebook">近走成績</button>}
     {entriesData && <button class="main-tab-btn" data-main-tab="entries">出馬表</button>}
   </div>
 
@@ -339,74 +339,70 @@ const title = `${venueInfo.name} ${formatDateJa(date)} AI指数`;
     )}
   </div>
 
-  <!-- ═══ 印・近走パネル ═══ -->
+  <!-- ═══ 近走パネル（出馬表風） ═══ -->
   {racebookData && (
     <div class="main-tab-panel" id="mainPanel-racebook">
-      {racebookData.races.map((race) => {
-        const assignMap = {};
-        if (race.assignments) {
-          if (race.assignments.main) assignMap[race.assignments.main] = '◎';
-          if (race.assignments.sub) assignMap[race.assignments.sub] = '○';
-          if (race.assignments.hole) assignMap[race.assignments.hole] = '▲';
-          if (race.assignments.connectTop) assignMap[race.assignments.connectTop] = '△';
-          for (const n of race.assignments.connect) assignMap[n] = '△';
-          for (const n of race.assignments.reserve) assignMap[n] = '☆';
-        }
-        return (
-          <div class="rb-race-card">
-            <div class="rb-race-header">
-              <span class="rb-race-num">{race.raceNumber}R</span>
-              <span class="rb-race-name">{race.raceClass}</span>
-              <span class="rb-race-dist">{race.distance}</span>
-              {race.startTime && <span class="rb-race-time">{race.startTime}発走</span>}
-              <span class="rb-race-count">{race.horseCount}頭</span>
-            </div>
-            <div class="rb-horse-list">
-              {race.horses.map((h) => {
-                const mark = assignMap[h.number] || '';
-                const markCls = mark === '◎' ? 'honmei' : mark === '○' ? 'taikou' : mark === '▲' ? 'tanana' : mark === '△' ? 'renka' : mark === '☆' ? 'hoseki' : '';
-                return (
-                  <div class={`rb-horse ${markCls ? 'rb-' + markCls : ''}`}>
-                    <div class="rb-horse-main">
-                      {mark && <span class={`rb-mark rb-mark-${markCls}`}>{mark}</span>}
-                      <span class="rb-num">{h.number}</span>
-                      <span class="rb-name">{h.name}</span>
-                      <span class="rb-info">{h.sexAge} {h.weight ? h.weight + 'kg' : ''} {h.jockey || ''}</span>
-                      {h.trainer && <span class="rb-trainer">{h.trainer}</span>}
-                      {h.totalScore > 0 && <span class="rb-score">{h.totalScore}点</span>}
-                    </div>
-                    {h.marks && h.marks.length > 0 && (
-                      <div class="rb-marks-row">
-                        {h.marks.map((m: string) => <span class="rb-mark-chip">{m}</span>)}
-                      </div>
-                    )}
-                    {h.pastRaces && h.pastRaces.length > 0 && (
-                      <div class="rb-past">
-                        {h.pastRaces.slice(0, 4).map((pr) => (
-                          <span class="rb-past-item">
-                            {pr.finish != null ? pr.finish + '着' : '?着'}
-                            {pr.venue && <Fragment> {pr.venue}</Fragment>}
-                            {pr.distance && <Fragment> {pr.distance}</Fragment>}
-                            {pr.time && <Fragment> {pr.time}</Fragment>}
-                            {pr.final3F && <Fragment> 上{pr.final3F}</Fragment>}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {h.training && (
-                      <div class="rb-training">
-                        🏋️ {h.training.trainingCourse || ''}{h.training.training3F || ''}
-                        {h.training.training1F && <Fragment>1F{h.training.training1F}</Fragment>}
-                        {h.training.trainingGrade && <Fragment> {h.training.trainingGrade}</Fragment>}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+      {racebookData.races.map((race) => (
+        <div class="rb-race-card">
+          <div class="rb-race-header">
+            <span class="rb-race-num">{race.raceNumber}R</span>
+            <span class="rb-race-name">{race.raceClass}</span>
+            <span class="rb-race-dist">{race.distance}</span>
+            {race.startTime && <span class="rb-race-time">{race.startTime}発走</span>}
+            <span class="rb-race-count">{race.horseCount}頭</span>
           </div>
-        );
-      })}
+          <div class="rb-table-wrap">
+            <table class="rb-table">
+              <thead>
+                <tr>
+                  <th class="rb-th-num">番</th>
+                  <th class="rb-th-name">馬名</th>
+                  <th>性齢</th>
+                  <th>斤量</th>
+                  <th>騎手</th>
+                  <th>厩舎</th>
+                  <th class="rb-th-past">近走成績</th>
+                </tr>
+              </thead>
+              <tbody>
+                {race.horses.map((h) => (
+                  <tr class="rb-row">
+                    <td class="rb-td-num">{h.number}</td>
+                    <td class="rb-td-name">
+                      <div class="rb-name-main">{h.name}</div>
+                      {h.sire && <div class="rb-name-sire">父 {h.sire}</div>}
+                    </td>
+                    <td class="rb-td-info">{h.sexAge || ''}</td>
+                    <td class="rb-td-info">{h.weight || ''}</td>
+                    <td class="rb-td-info">{h.jockey || ''}</td>
+                    <td class="rb-td-info">{h.trainer || ''}</td>
+                    <td class="rb-td-past">
+                      {h.pastRaces && h.pastRaces.length > 0 ? (
+                        <div class="rb-past-list">
+                          {h.pastRaces.slice(0, 4).map((pr) => (
+                            <div class="rb-past-row">
+                              <span class={`rb-past-finish ${pr.finish && pr.finish <= 3 ? 'rb-past-top3' : ''}`}>
+                                {pr.finish != null ? pr.finish + '着' : '-'}
+                              </span>
+                              <span class="rb-past-venue">{pr.venue || ''}</span>
+                              {pr.distance && <span class="rb-past-dist">{pr.distance}</span>}
+                              {pr.time && <span class="rb-past-time">{pr.time}</span>}
+                              {pr.final3F && <span class="rb-past-f3">上{pr.final3F}</span>}
+                              {pr.paceType && <span class="rb-past-pace">{pr.paceType}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span class="rb-past-none">初出走</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
     </div>
   )}
 
@@ -537,37 +533,36 @@ const title = `${venueInfo.name} ${formatDateJa(date)} AI指数`;
 </BaseLayout>
 
 <style>
-/* ── 印・近走パネル ── */
-.rb-race-card { margin-bottom: 1rem; border: 1px solid #334155; border-radius: 8px; overflow: hidden; }
+/* ── 近走パネル（出馬表風） ── */
+.rb-race-card { margin-bottom: 1.25rem; border: 1px solid #334155; border-radius: 8px; overflow: hidden; }
 .rb-race-header { background: #1e293b; padding: 0.6rem 1rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
-.rb-race-num { font-weight: 800; font-size: 1.1rem; }
-.rb-race-name { font-weight: 600; }
+.rb-race-num { font-weight: 800; font-size: 1.1rem; color: #f1f5f9; }
+.rb-race-name { font-weight: 600; color: #e2e8f0; }
 .rb-race-dist, .rb-race-time, .rb-race-count { color: #94a3b8; font-size: 0.85rem; }
-.rb-horse-list { display: flex; flex-direction: column; }
-.rb-horse { padding: 0.5rem 0.75rem; border-bottom: 1px solid #1e293b; }
-.rb-horse:last-child { border-bottom: none; }
-.rb-honmei { border-left: 3px solid #ef4444; background: rgba(239,68,68,0.05); }
-.rb-taikou { border-left: 3px solid #3b82f6; background: rgba(59,130,246,0.05); }
-.rb-tanana { border-left: 3px solid #f59e0b; background: rgba(245,158,11,0.05); }
-.rb-renka { border-left: 3px solid #64748b; }
-.rb-hoseki { border-left: 3px solid #475569; }
-.rb-horse-main { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
-.rb-mark { font-weight: 800; font-size: 1.1rem; min-width: 1.3rem; text-align: center; }
-.rb-mark-honmei { color: #ef4444; }
-.rb-mark-taikou { color: #3b82f6; }
-.rb-mark-tanana { color: #f59e0b; }
-.rb-mark-renka { color: #94a3b8; }
-.rb-mark-hoseki { color: #64748b; }
-.rb-num { font-weight: 700; min-width: 1.5rem; text-align: center; }
-.rb-name { font-weight: 600; }
-.rb-info { color: #94a3b8; font-size: 0.8rem; }
-.rb-trainer { color: #64748b; font-size: 0.75rem; }
-.rb-score { font-size: 0.75rem; color: #f59e0b; font-weight: 600; margin-left: auto; }
-.rb-marks-row { display: flex; gap: 2px; margin-top: 0.2rem; }
-.rb-mark-chip { font-size: 0.85rem; min-width: 1.2em; text-align: center; }
-.rb-past { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.3rem; }
-.rb-past-item { font-size: 0.7rem; background: #1e293b; border-radius: 3px; padding: 1px 5px; color: #94a3b8; white-space: nowrap; }
-.rb-training { font-size: 0.7rem; color: #64748b; margin-top: 0.2rem; }
+.rb-table-wrap { overflow-x: auto; }
+.rb-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.rb-table th { background: #0f172a; color: #94a3b8; padding: 0.4rem 0.5rem; text-align: left; font-weight: 600; font-size: 0.72rem; white-space: nowrap; border-bottom: 2px solid #334155; }
+.rb-th-num { width: 2.5rem; text-align: center; }
+.rb-th-name { min-width: 7rem; }
+.rb-th-past { min-width: 16rem; }
+.rb-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid #1e293b; vertical-align: top; }
+.rb-row:hover { background: rgba(30, 41, 59, 0.5); }
+.rb-td-num { text-align: center; font-weight: 800; font-size: 0.95rem; color: #f1f5f9; }
+.rb-td-name { }
+.rb-name-main { font-weight: 700; color: #f1f5f9; font-size: 0.9rem; }
+.rb-name-sire { font-size: 0.68rem; color: #64748b; margin-top: 1px; }
+.rb-td-info { color: #cbd5e1; white-space: nowrap; font-size: 0.8rem; }
+.rb-td-past { padding: 0.3rem 0.4rem; }
+.rb-past-list { display: flex; flex-direction: column; gap: 2px; }
+.rb-past-row { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: #94a3b8; }
+.rb-past-finish { font-weight: 700; min-width: 2.2rem; color: #cbd5e1; }
+.rb-past-top3 { color: #f59e0b; }
+.rb-past-venue { color: #94a3b8; min-width: 4rem; }
+.rb-past-dist { color: #64748b; }
+.rb-past-time { color: #cbd5e1; font-family: monospace; }
+.rb-past-f3 { color: #60a5fa; font-size: 0.7rem; }
+.rb-past-pace { color: #64748b; font-size: 0.68rem; }
+.rb-past-none { color: #475569; font-style: italic; font-size: 0.8rem; }
 
 /* ── パンくず ── */
 .breadcrumb {
