@@ -339,70 +339,81 @@ const title = `${venueInfo.name} ${formatDateJa(date)} AI指数`;
     )}
   </div>
 
-  <!-- ═══ 近走パネル（出馬表風） ═══ -->
+  <!-- ═══ 近走パネル（レースタブ切り替え） ═══ -->
   {racebookData && (
     <div class="main-tab-panel" id="mainPanel-racebook">
-      {racebookData.races.map((race) => (
-        <div class="rb-race-card">
-          <div class="rb-race-header">
-            <span class="rb-race-num">{race.raceNumber}R</span>
-            <span class="rb-race-name">{race.raceClass}</span>
-            <span class="rb-race-dist">{race.distance}</span>
-            {race.startTime && <span class="rb-race-time">{race.startTime}発走</span>}
-            <span class="rb-race-count">{race.horseCount}頭</span>
-          </div>
-          <div class="rb-table-wrap">
-            <table class="rb-table">
-              <thead>
-                <tr>
-                  <th class="rb-th-num">番</th>
-                  <th class="rb-th-name">馬名</th>
-                  <th>性齢</th>
-                  <th>斤量</th>
-                  <th>騎手</th>
-                  <th>厩舎</th>
-                  <th class="rb-th-past">近走成績</th>
-                </tr>
-              </thead>
-              <tbody>
-                {race.horses.map((h) => (
-                  <tr class="rb-row">
-                    <td class="rb-td-num">{h.number}</td>
-                    <td class="rb-td-name">
-                      <div class="rb-name-main">{h.name}</div>
-                      {h.sire && <div class="rb-name-sire">父 {h.sire}</div>}
-                    </td>
-                    <td class="rb-td-info">{h.sexAge || ''}</td>
-                    <td class="rb-td-info">{h.weight || ''}</td>
-                    <td class="rb-td-info">{h.jockey || ''}</td>
-                    <td class="rb-td-info">{h.trainer || ''}</td>
-                    <td class="rb-td-past">
-                      {h.pastRaces && h.pastRaces.length > 0 ? (
-                        <div class="rb-past-list">
-                          {h.pastRaces.slice(0, 4).map((pr) => (
-                            <div class="rb-past-row">
-                              <span class={`rb-past-finish ${pr.finish && pr.finish <= 3 ? 'rb-past-top3' : ''}`}>
-                                {pr.finish != null ? pr.finish + '着' : '-'}
-                              </span>
-                              <span class="rb-past-venue">{pr.venue || ''}</span>
-                              {pr.distance && <span class="rb-past-dist">{pr.distance}</span>}
-                              {pr.time && <span class="rb-past-time">{pr.time}</span>}
-                              {pr.final3F && <span class="rb-past-f3">上{pr.final3F}</span>}
-                              {pr.paceType && <span class="rb-past-pace">{pr.paceType}</span>}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <span class="rb-past-none">初出走</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      <div class="tab-container">
+        <div class="tab-bar" role="tablist" id="rbTabBar">
+          {racebookData.races.map((race, i) => (
+            <button
+              class={`tab-btn ${i === 0 ? 'active' : ''}`}
+              role="tab"
+              data-rb-tab={i}
+            >{race.raceNumber}R</button>
+          ))}
         </div>
-      ))}
+        {racebookData.races.map((race, i) => (
+          <div class={`tab-panel ${i === 0 ? 'active' : ''}`} data-rb-panel={i}>
+            <div class="rb-race-header">
+              <span class="rb-race-num">{race.raceNumber}R</span>
+              <span class="rb-race-name">{race.raceClass}</span>
+              <span class="rb-race-dist">{race.distance}</span>
+              {race.startTime && <span class="rb-race-time">{race.startTime}発走</span>}
+              <span class="rb-race-count">{race.horseCount}頭</span>
+            </div>
+            <div class="rb-table-wrap">
+              <table class="rb-table">
+                <thead>
+                  <tr>
+                    <th class="rb-th-num">番</th>
+                    <th class="rb-th-name">馬名</th>
+                    <th>性齢</th>
+                    <th>斤量</th>
+                    <th>騎手</th>
+                    <th>厩舎</th>
+                    <th class="rb-th-past">近走成績</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {race.horses.map((h) => (
+                    <tr class="rb-row">
+                      <td class="rb-td-num">{h.number}</td>
+                      <td class="rb-td-name">
+                        <div class="rb-name-main">{h.name}</div>
+                        {h.sire && <div class="rb-name-sire">父 {h.sire}</div>}
+                      </td>
+                      <td class="rb-td-info">{h.sexAge || ''}</td>
+                      <td class="rb-td-info">{h.weight || ''}</td>
+                      <td class="rb-td-info">{h.jockey || ''}</td>
+                      <td class="rb-td-info">{h.trainer || ''}</td>
+                      <td class="rb-td-past">
+                        {h.pastRaces && h.pastRaces.length > 0 ? (
+                          <div class="rb-past-list">
+                            {h.pastRaces.slice(0, 4).map((pr) => (
+                              <div class="rb-past-row">
+                                <span class={`rb-past-finish ${pr.finish && pr.finish <= 3 ? 'rb-past-top3' : ''}`}>
+                                  {pr.finish != null ? pr.finish + '着' : '-'}
+                                </span>
+                                <span class="rb-past-venue">{pr.venue || ''}</span>
+                                {pr.distance && <span class="rb-past-dist">{pr.distance}</span>}
+                                {pr.time && <span class="rb-past-time">{pr.time}</span>}
+                                {pr.final3F && <span class="rb-past-f3">上{pr.final3F}</span>}
+                                {pr.paceType && <span class="rb-past-pace">{pr.paceType}</span>}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span class="rb-past-none">初出走</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )}
 
@@ -1170,6 +1181,21 @@ document.getElementById('entriesTabBar')?.addEventListener('click', (e) => {
     t.classList.toggle('active', i === idx);
   });
   document.querySelectorAll('[data-entries-panel]').forEach((p, i) => {
+    (p as HTMLElement).classList.toggle('active', i === idx);
+  });
+});
+
+// 近走レースタブ切り替え
+document.getElementById('rbTabBar')?.addEventListener('click', (e) => {
+  const btn = (e.target as HTMLElement).closest('.tab-btn') as HTMLElement | null;
+  if (!btn) return;
+  const idx = Number(btn.dataset.rbTab);
+  if (isNaN(idx)) return;
+
+  document.querySelectorAll('#rbTabBar .tab-btn').forEach((t, i) => {
+    t.classList.toggle('active', i === idx);
+  });
+  document.querySelectorAll('[data-rb-panel]').forEach((p, i) => {
     (p as HTMLElement).classList.toggle('active', i === idx);
   });
 });
