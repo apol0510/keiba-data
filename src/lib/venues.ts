@@ -167,6 +167,88 @@ export function getEntriesDataUrl(date: string, venue: VenueInfo): string {
   return `${GITHUB_RAW_BASE}/${venue.category}/entries/${year}/${month}/${date}-${venue.code}.json`;
 }
 
+// ── racebook データ型定義（race-data-importer由来） ──
+
+export interface RacebookPastRace {
+  venue: string | null;
+  raceClass: string | null;
+  finish: number | null;
+  cond: string | null;
+  courseNote: string | null;
+  distance: string | null;
+  time: string | null;
+  weight: number | null;
+  jockey: string | null;
+  bodyWeight: number | null;
+  paceType: string | null;
+  paceRank: number | null;
+  final3F: string | null;
+  winner: string | null;
+}
+
+export interface RacebookHorse {
+  number: number;
+  name: string;
+  sire: string | null;
+  dam: string | null;
+  sexAge: string | null;
+  sex: string | null;
+  age: number | null;
+  weight: number | null;
+  jockey: string | null;
+  trainer: string | null;
+  computerIndex: string | null;
+  marks: string[];
+  totalScore: number;
+  assignment: string;
+  predictedOdds: number | null;
+  shortComment: string | null;
+  training: {
+    training4F: string | null;
+    trainingCourse: string | null;
+    training3F: string | null;
+    training1F: string | null;
+    trainingGrade: string | null;
+    trainingStyle: string | null;
+  } | null;
+  pastRaces: RacebookPastRace[];
+}
+
+export interface RacebookRace {
+  raceNumber: number;
+  raceClass: string | null;
+  conditions: string | null;
+  distance: string | null;
+  startTime: string | null;
+  horseCount: number;
+  assignments: {
+    main: number | null;
+    sub: number | null;
+    hole: number | null;
+    connectTop: number | null;
+    connect: number[];
+    reserve: number[];
+    none: number[];
+  };
+  horses: RacebookHorse[];
+}
+
+export interface RacebookData {
+  version: string;
+  source: string;
+  createdAt: string;
+  date: string;
+  category: string;
+  track: string;
+  trackCode: string;
+  races: RacebookRace[];
+}
+
+export function getRacebookDataUrl(date: string, venue: VenueInfo): string {
+  const [year, month] = date.split('-');
+  return `${GITHUB_RAW_BASE}/${venue.category}/racebook/${year}/${month}/${date}-${venue.code}.json`;
+}
+
 // 指定日の全競馬場データを並列取得
 export async function fetchAllVenues(date: string): Promise<VenueResult[]> {
   const results = await Promise.allSettled(
